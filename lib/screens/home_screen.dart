@@ -22,7 +22,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.bg,
+      backgroundColor: context.colors.bg,
       body: Consumer<HydrationProvider>(
         builder: (context, provider, _) {
           return NotificationListener<ScrollNotification>(
@@ -42,12 +42,32 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Stack(
               fit: StackFit.expand,
               children: [
-                // Screen content
-                _buildScreen(provider.activeNav),
+                // Screen content with smooth transition
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 200),
+                  switchInCurve: Curves.easeOutCubic,
+                  switchOutCurve: Curves.easeInCubic,
+                  transitionBuilder: (Widget child, Animation<double> animation) {
+                    return FadeTransition(
+                      opacity: animation,
+                      child: SlideTransition(
+                        position: Tween<Offset>(
+                          begin: const Offset(0, 0.05),
+                          end: Offset.zero,
+                        ).animate(animation),
+                        child: child,
+                      ),
+                    );
+                  },
+                  child: Container(
+                    key: ValueKey<String>(provider.activeNav),
+                    child: _buildScreen(provider.activeNav),
+                  ),
+                ),
 
                 // Floating nav bar with auto-hide animation
                 AnimatedPositioned(
-                  duration: const Duration(milliseconds: 500),
+                  duration: const Duration(milliseconds: 300),
                   curve: Curves.easeOutQuint,
                   left: 20.w,
                   right: 20.w,
@@ -55,7 +75,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       ? (16.h + MediaQuery.of(context).padding.bottom) 
                       : -140.h,
                   child: AnimatedOpacity(
-                    duration: const Duration(milliseconds: 350),
+                    duration: const Duration(milliseconds: 200),
                     opacity: _isVisible ? 1.0 : 0.0,
                     child: AppNavBar(
                       current: provider.activeNav,

@@ -5,14 +5,17 @@ import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'theme/app_theme.dart';
 import 'providers/hydration_provider.dart';
+import 'services/notification_service.dart';
 import 'screens/splash_screen.dart';
 import 'screens/onboarding_screen.dart';
 import 'screens/setup_screen.dart';
 import 'screens/home_screen.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
+  await NotificationService().init();
+
   // Use edgeToEdge as the primary mode to prevent 'black bar' glitches
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
   
@@ -42,33 +45,43 @@ class AquaApp extends StatelessWidget {
         minTextAdapt: true,
         splitScreenMode: true,
         builder: (context, child) {
-          return MaterialApp(
-            title: 'Aqua - Water Tracker',
-            debugShowCheckedModeBanner: false,
-            theme: ThemeData(
-              useMaterial3: true,
-              colorSchemeSeed: AppTheme.primary,
-              textTheme: GoogleFonts.dmSansTextTheme(),
-              scaffoldBackgroundColor: AppTheme.bg,
-              appBarTheme: const AppBarTheme(
-                backgroundColor: Colors.transparent,
-                elevation: 0,
-                systemOverlayStyle: SystemUiOverlayStyle(
-                  statusBarColor: Colors.transparent,
-                  statusBarIconBrightness: Brightness.dark,
-                  systemNavigationBarColor: Colors.transparent,
-                  systemNavigationBarIconBrightness: Brightness.dark,
-                  systemNavigationBarContrastEnforced: false,
-                  systemStatusBarContrastEnforced: false,
+          return Consumer<HydrationProvider>(
+            builder: (context, provider, _) {
+              final isDark = provider.userData.darkMode;
+              final appColors = isDark ? AppTheme.dark : AppTheme.light;
+              return MaterialApp(
+                title: 'Aqua - Water Tracker',
+                debugShowCheckedModeBanner: false,
+                theme: ThemeData(
+                  useMaterial3: true,
+                  brightness: isDark ? Brightness.dark : Brightness.light,
+                  colorSchemeSeed: appColors.primary,
+                  textTheme: GoogleFonts.dmSansTextTheme(
+                    ThemeData(brightness: isDark ? Brightness.dark : Brightness.light).textTheme,
+                  ),
+                  scaffoldBackgroundColor: appColors.bg,
+                  appBarTheme: AppBarTheme(
+                    backgroundColor: Colors.transparent,
+                    elevation: 0,
+                    systemOverlayStyle: SystemUiOverlayStyle(
+                      statusBarColor: Colors.transparent,
+                      statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
+                      systemNavigationBarColor: Colors.transparent,
+                      systemNavigationBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
+                      systemNavigationBarContrastEnforced: false,
+                      systemStatusBarContrastEnforced: false,
+                    ),
+                  ),
+                  extensions: [appColors],
                 ),
-              ),
-            ),
-            initialRoute: '/splash',
-            routes: {
-              '/splash': (context) => SplashScreen(),
-              '/onboarding': (context) => OnboardingScreen(),
-              '/setup': (context) => SetupScreen(),
-              '/home': (context) => HomeScreen(),
+                initialRoute: '/splash',
+                routes: {
+                  '/splash': (context) => SplashScreen(),
+                  '/onboarding': (context) => OnboardingScreen(),
+                  '/setup': (context) => SetupScreen(),
+                  '/home': (context) => HomeScreen(),
+                },
+              );
             },
           );
         },

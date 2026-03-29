@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
 import '../providers/hydration_provider.dart';
 import '../widgets/app_button.dart';
+import 'package:flutter/services.dart';
 
 class ScheduleScreen extends StatelessWidget {
   const ScheduleScreen({super.key});
@@ -28,13 +29,13 @@ class ScheduleScreen extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 26.sp,
                       fontWeight: FontWeight.w800,
-                      color: AppTheme.primaryDark,
+                      color: context.colors.primaryDark,
                     ),
                   ),
                   SizedBox(height: 4.h),
                   Text(
                     'Your daily reminders',
-                    style: TextStyle(fontSize: 13.sp, color: AppTheme.mutedLight),
+                    style: TextStyle(fontSize: 13.sp, color: context.colors.mutedLight),
                   ),
                 ],
               ),
@@ -46,7 +47,7 @@ class ScheduleScreen extends StatelessWidget {
                 child: Column(
                   children: [
                     // Sleep Schedule card
-                    _buildCard(
+                    _buildCard(context,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -55,7 +56,7 @@ class ScheduleScreen extends StatelessWidget {
                             style: TextStyle(
                               fontWeight: FontWeight.w700,
                               fontSize: 14.sp,
-                              color: AppTheme.primaryDark,
+                              color: context.colors.primaryDark,
                             ),
                           ),
                           SizedBox(height: 14.h),
@@ -94,7 +95,7 @@ class ScheduleScreen extends StatelessWidget {
                     SizedBox(height: 16.h),
 
                     // Today's Reminders card
-                    _buildCard(
+                    _buildCard(context,
                       child: Column(
                         children: [
                           Row(
@@ -105,29 +106,29 @@ class ScheduleScreen extends StatelessWidget {
                                 style: TextStyle(
                                   fontWeight: FontWeight.w700,
                                   fontSize: 14.sp,
-                                  color: AppTheme.primaryDark,
+                                  color: context.colors.primaryDark,
                                 ),
                               ),
                               Container(
                                 padding: EdgeInsets.symmetric(
                                     horizontal: 10.w, vertical: 4.h),
                                 decoration: BoxDecoration(
-                                  color: AppTheme.primary.withValues(alpha: 0.09),
+                                  color: context.colors.primary.withValues(alpha: 0.09),
                                   borderRadius: BorderRadius.circular(8.r),
                                 ),
                                 child: Text(
-                                  '8 set',
+                                  '${provider.generatedReminders.length} set',
                                   style: TextStyle(
                                     fontSize: 12.sp,
                                     fontWeight: FontWeight.w600,
-                                    color: AppTheme.primary,
+                                    color: context.colors.primary,
                                   ),
                                 ),
                               ),
                             ],
                           ),
                           SizedBox(height: 14.h),
-                          ..._buildRemindersList(),
+                          ..._buildRemindersList(context, provider),
                         ],
                       ),
                     ),
@@ -147,17 +148,17 @@ class ScheduleScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildCard({required Widget child}) {
+  Widget _buildCard(BuildContext context, {required Widget child}) {
     return Container(
       width: double.infinity,
       padding: EdgeInsets.all(16.w),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.colors.card,
         borderRadius: BorderRadius.circular(20.r),
-        border: Border.all(color: AppTheme.softLight),
+        border: Border.all(color: context.colors.softLight),
         boxShadow: [
           BoxShadow(
-            color: AppTheme.primary.withValues(alpha: 0.07),
+            color: context.colors.primary.withValues(alpha: 0.07),
             blurRadius: 16,
             offset: Offset(0, 2),
           ),
@@ -175,11 +176,14 @@ class ScheduleScreen extends StatelessWidget {
     required VoidCallback onTap,
   }) {
     return GestureDetector(
-      onTap: onTap,
+      onTap: () {
+        HapticFeedback.lightImpact();
+        onTap();
+      },
       child: Container(
         padding: EdgeInsets.all(12.w),
         decoration: BoxDecoration(
-          color: AppTheme.softLight,
+          color: context.colors.softLight,
           borderRadius: BorderRadius.circular(14.r),
         ),
         child: Column(
@@ -188,7 +192,7 @@ class ScheduleScreen extends StatelessWidget {
             SizedBox(height: 4.h),
             Text(
               label,
-              style: TextStyle(fontSize: 11.sp, color: AppTheme.mutedLight),
+              style: TextStyle(fontSize: 11.sp, color: context.colors.mutedLight),
             ),
             SizedBox(height: 6.h),
             Text(
@@ -196,7 +200,7 @@ class ScheduleScreen extends StatelessWidget {
               style: TextStyle(
                 fontSize: 16.sp,
                 fontWeight: FontWeight.w700,
-                color: AppTheme.primary,
+                color: context.colors.primary,
               ),
             ),
           ],
@@ -226,17 +230,17 @@ class ScheduleScreen extends StatelessWidget {
     }
   }
 
-  List<Widget> _buildRemindersList() {
-    final reminders = [
-      {'time': '07:00', 'label': 'Wake-up glass', 'icon': '💧', 'done': true},
-      {'time': '09:00', 'label': 'Morning hydration', 'icon': '💧', 'done': true},
-      {'time': '11:00', 'label': 'Mid-morning', 'icon': '🥤', 'done': true},
-      {'time': '13:00', 'label': 'Lunch time', 'icon': '💧', 'done': false},
-      {'time': '15:00', 'label': 'Afternoon boost', 'icon': '💧', 'done': false},
-      {'time': '17:00', 'label': 'Evening hydration', 'icon': '🧃', 'done': false},
-      {'time': '19:00', 'label': 'Dinner glass', 'icon': '💧', 'done': false},
-      {'time': '21:00', 'label': 'Before bed', 'icon': '💧', 'done': false},
-    ];
+  List<Widget> _buildRemindersList(BuildContext context, HydrationProvider provider) {
+    final now = TimeOfDay.now();
+    final reminders = provider.generatedReminders.map((t) {
+      final isPast = t.hour < now.hour || (t.hour == now.hour && t.minute <= now.minute);
+      return {
+        'time': '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}',
+        'label': 'Hydration Reminder',
+        'icon': '💧',
+        'done': isPast,
+      };
+    }).toList();
 
     return reminders.map((r) {
       final done = r['done'] as bool;
@@ -244,7 +248,7 @@ class ScheduleScreen extends StatelessWidget {
         padding: EdgeInsets.symmetric(vertical: 11.h),
         decoration: BoxDecoration(
           border: Border(
-            bottom: BorderSide(color: AppTheme.softLight, width: 1.w),
+            bottom: BorderSide(color: context.colors.softLight, width: 1.w),
           ),
         ),
         child: Row(
@@ -254,8 +258,8 @@ class ScheduleScreen extends StatelessWidget {
               height: 36.h,
               decoration: BoxDecoration(
                 color: done
-                    ? AppTheme.primary.withValues(alpha: 0.09)
-                    : AppTheme.softLight,
+                    ? context.colors.primary.withValues(alpha: 0.09)
+                    : context.colors.softLight,
                 borderRadius: BorderRadius.circular(12.r),
               ),
               child: Center(
@@ -273,7 +277,7 @@ class ScheduleScreen extends StatelessWidget {
                     style: TextStyle(
                       fontWeight: FontWeight.w600,
                       fontSize: 13.sp,
-                      color: done ? AppTheme.mutedLight : AppTheme.text,
+                      color: done ? context.colors.mutedLight : context.colors.text,
                       decoration:
                           done ? TextDecoration.lineThrough : TextDecoration.none,
                     ),
@@ -281,7 +285,7 @@ class ScheduleScreen extends StatelessWidget {
                   Text(
                     r['time'] as String,
                     style: TextStyle(
-                        fontSize: 11.sp, color: AppTheme.mutedLight),
+                        fontSize: 11.sp, color: context.colors.mutedLight),
                   ),
                 ],
               ),
@@ -290,8 +294,8 @@ class ScheduleScreen extends StatelessWidget {
               width: 22.w,
               height: 22.h,
               decoration: BoxDecoration(
-                gradient: done ? AppTheme.primaryGradient : null,
-                color: done ? null : AppTheme.softLight,
+                gradient: done ? context.colors.primaryGradient : null,
+                color: done ? null : context.colors.softLight,
                 borderRadius: BorderRadius.circular(8.r),
               ),
               child: done

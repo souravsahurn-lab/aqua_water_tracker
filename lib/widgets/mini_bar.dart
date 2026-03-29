@@ -33,7 +33,7 @@ class MiniBar extends StatelessWidget {
                 label,
                 style: TextStyle(
                   fontSize: 12.sp,
-                  color: AppTheme.mutedLight,
+                  color: context.colors.mutedLight,
                 ),
               ),
               Text(
@@ -41,7 +41,7 @@ class MiniBar extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 12.sp,
                   fontWeight: FontWeight.w700,
-                  color: AppTheme.text,
+                  color: context.colors.text,
                 ),
               ),
             ],
@@ -50,13 +50,13 @@ class MiniBar extends StatelessWidget {
           Container(
             height: 7.h,
             decoration: BoxDecoration(
-              color: AppTheme.softLight,
+              color: context.colors.softLight,
               borderRadius: BorderRadius.circular(8.r),
             ),
             child: Align(
               alignment: Alignment.centerLeft,
               child: AnimatedFractionallySizedBox(
-                duration: Duration(seconds: 1),
+                duration: const Duration(milliseconds: 300),
                 curve: Curves.easeOutCubic,
                 widthFactor: pct / 100,
                 child: Container(

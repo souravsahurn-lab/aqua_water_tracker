@@ -46,7 +46,7 @@ class SetupScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.bg,
+      backgroundColor: context.colors.bg,
       body: Consumer<HydrationProvider>(
         builder: (context, provider, _) {
           final stepIdx = provider.setupStep;
@@ -64,14 +64,14 @@ class SetupScreen extends StatelessWidget {
                 right: 0.w,
                 height: 3.h,
                 child: Container(
-                  color: AppTheme.softLight,
+                  color: context.colors.softLight,
                   child: FractionallySizedBox(
                     alignment: Alignment.centerLeft,
                     widthFactor: prog,
                     child: Container(
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
-                          colors: [AppTheme.primary, AppTheme.accent],
+                          colors: [context.colors.primary, context.colors.accent],
                         ),
                         borderRadius: BorderRadius.horizontal(
                           right: Radius.circular(2.r),
@@ -99,7 +99,7 @@ class SetupScreen extends StatelessWidget {
                                 child: Icon(
                                   Icons.chevron_left_rounded,
                                   size: 28,
-                                  color: AppTheme.primary,
+                                  color: context.colors.primary,
                                 ),
                               ),
                             ),
@@ -114,7 +114,7 @@ class SetupScreen extends StatelessWidget {
                                       style: TextStyle(
                                         fontSize: 11.sp,
                                         fontWeight: FontWeight.w600,
-                                        color: AppTheme.mutedLight,
+                                        color: context.colors.mutedLight,
                                       ),
                                     ),
                                     SizedBox(width: 8.w),
@@ -124,7 +124,7 @@ class SetupScreen extends StatelessWidget {
                                         vertical: 2.h,
                                       ),
                                       decoration: BoxDecoration(
-                                        color: AppTheme.danger.withValues(
+                                        color: context.colors.danger.withValues(
                                           alpha: 0.1,
                                         ),
                                         borderRadius: BorderRadius.circular(
@@ -136,7 +136,7 @@ class SetupScreen extends StatelessWidget {
                                         style: TextStyle(
                                           fontSize: 9.sp,
                                           fontWeight: FontWeight.w900,
-                                          color: AppTheme.danger,
+                                          color: context.colors.danger,
                                           letterSpacing: 0.5,
                                         ),
                                       ),
@@ -149,7 +149,7 @@ class SetupScreen extends StatelessWidget {
                                   style: TextStyle(
                                     fontSize: 24.sp,
                                     fontWeight: FontWeight.w800,
-                                    color: AppTheme.primaryDark,
+                                    color: context.colors.primaryDark,
                                   ),
                                 ),
                                 SizedBox(height: 2.h),
@@ -157,7 +157,7 @@ class SetupScreen extends StatelessWidget {
                                   meta['sub']!,
                                   style: TextStyle(
                                     fontSize: 12.sp,
-                                    color: AppTheme.mutedLight,
+                                    color: context.colors.mutedLight,
                                   ),
                                 ),
                               ],
@@ -179,12 +179,12 @@ class SetupScreen extends StatelessWidget {
                                 gradient: i <= stepIdx
                                     ? LinearGradient(
                                         colors: [
-                                          AppTheme.primary,
-                                          AppTheme.accent,
+                                          context.colors.primary,
+                                          context.colors.accent,
                                         ],
                                       )
                                     : null,
-                                color: i <= stepIdx ? null : AppTheme.softLight,
+                                color: i <= stepIdx ? null : context.colors.softLight,
                                 borderRadius: BorderRadius.circular(2.r),
                               ),
                             ),
@@ -211,10 +211,10 @@ class SetupScreen extends StatelessWidget {
                           vertical: 14.h,
                         ),
                         decoration: BoxDecoration(
-                          color: AppTheme.primary.withValues(alpha: 0.05),
+                          color: context.colors.primary.withValues(alpha: 0.05),
                           borderRadius: BorderRadius.circular(16.r),
                           border: Border.all(
-                            color: AppTheme.primary.withValues(alpha: 0.1),
+                            color: context.colors.primary.withValues(alpha: 0.1),
                           ),
                         ),
                         child: Row(
@@ -222,7 +222,7 @@ class SetupScreen extends StatelessWidget {
                           children: [
                             Icon(
                               Icons.info_outline_rounded,
-                              color: AppTheme.primary,
+                              color: context.colors.primary,
                               size: 20.sp,
                             ),
                             SizedBox(width: 12.w),
@@ -235,7 +235,7 @@ class SetupScreen extends StatelessWidget {
                                     style: TextStyle(
                                       fontSize: 12.sp,
                                       fontWeight: FontWeight.w700,
-                                      color: AppTheme.primaryDark,
+                                      color: context.colors.primaryDark,
                                     ),
                                   ),
                                   SizedBox(height: 4.h),
@@ -244,7 +244,7 @@ class SetupScreen extends StatelessWidget {
                                     style: TextStyle(
                                       fontSize: 12.sp,
                                       height: 1.4,
-                                      color: AppTheme.primaryDark.withValues(
+                                      color: context.colors.primaryDark.withValues(
                                         alpha: 0.7,
                                       ),
                                     ),
@@ -268,7 +268,7 @@ class SetupScreen extends StatelessWidget {
                                 style: TextStyle(
                                   fontSize: 12.sp,
                                   fontWeight: FontWeight.w600,
-                                  color: AppTheme.danger,
+                                  color: context.colors.danger,
                                 ),
                               ),
                             ),
@@ -327,13 +327,13 @@ class SetupScreen extends StatelessWidget {
   ) {
     switch (step) {
       case 'name':
-        return _buildNameStep(provider);
+        return _buildNameStep(context, provider);
       case 'gender':
-        return _buildGenderStep(provider);
+        return _buildGenderStep(context, provider);
       case 'stats':
         return _StatsStepWidget(provider: provider);
       case 'activity':
-        return _buildActivityStep(provider);
+        return _buildActivityStep(context, provider);
       case 'schedule':
         return _ScheduleStepWidget(provider: provider);
       default:
@@ -341,7 +341,7 @@ class SetupScreen extends StatelessWidget {
     }
   }
 
-  Widget _buildNameStep(HydrationProvider provider) {
+  Widget _buildNameStep(BuildContext context, HydrationProvider provider) {
     return Column(
       children: [
         Container(
@@ -351,11 +351,11 @@ class SetupScreen extends StatelessWidget {
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [AppTheme.seafoamLight, AppTheme.softLight],
+              colors: [context.colors.seafoamLight, context.colors.softLight],
             ),
             borderRadius: BorderRadius.circular(28.r),
           ),
-          child: Icon(Icons.person_rounded, size: 40, color: AppTheme.primary),
+          child: Icon(Icons.person_rounded, size: 40, color: context.colors.primary),
         ),
         SizedBox(height: 20.h),
         TextField(
@@ -364,12 +364,12 @@ class SetupScreen extends StatelessWidget {
           style: TextStyle(
             fontSize: 24.sp,
             fontWeight: FontWeight.w800,
-            color: AppTheme.primaryDark,
+            color: context.colors.primaryDark,
           ),
           decoration: InputDecoration(
             hintText: 'e.g. Alex',
             hintStyle: TextStyle(
-              color: AppTheme.mutedLight.withValues(alpha: 0.5),
+              color: context.colors.mutedLight.withValues(alpha: 0.5),
               fontWeight: FontWeight.w400,
             ),
             contentPadding: EdgeInsets.symmetric(
@@ -377,18 +377,18 @@ class SetupScreen extends StatelessWidget {
               vertical: 18.h,
             ),
             filled: true,
-            fillColor: Colors.white,
+            fillColor: context.colors.card,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(18.r),
-              borderSide: BorderSide(color: AppTheme.soft, width: 2.w),
+              borderSide: BorderSide(color: context.colors.soft, width: 2.w),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(18.r),
-              borderSide: BorderSide(color: AppTheme.soft, width: 2.w),
+              borderSide: BorderSide(color: context.colors.soft, width: 2.w),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(18.r),
-              borderSide: BorderSide(color: AppTheme.primary, width: 2.w),
+              borderSide: BorderSide(color: context.colors.primary, width: 2.w),
             ),
           ),
         ),
@@ -396,7 +396,7 @@ class SetupScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildGenderStep(HydrationProvider provider) {
+  Widget _buildGenderStep(BuildContext context, HydrationProvider provider) {
     final genders = [
       {'val': 'male', 'emoji': '👨', 'label': 'Male'},
       {'val': 'female', 'emoji': '👩', 'label': 'Female'},
@@ -414,26 +414,26 @@ class SetupScreen extends StatelessWidget {
                 duration: Duration(milliseconds: 200),
                 padding: EdgeInsets.symmetric(vertical: 28.h, horizontal: 12.w),
                 decoration: BoxDecoration(
-                  color: isSelected ? null : Colors.white,
+                  color: isSelected ? null : context.colors.card,
                   gradient: isSelected
                       ? LinearGradient(
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                           colors: [
-                            AppTheme.primary.withValues(alpha: 0.09),
-                            AppTheme.accent.withValues(alpha: 0.07),
+                            context.colors.primary.withValues(alpha: 0.09),
+                            context.colors.accent.withValues(alpha: 0.07),
                           ],
                         )
                       : null,
                   borderRadius: BorderRadius.circular(24.r),
                   border: Border.all(
-                    color: isSelected ? AppTheme.primary : AppTheme.softLight,
+                    color: isSelected ? context.colors.primary : context.colors.softLight,
                     width: isSelected ? 2.5 : 2,
                   ),
                   boxShadow: [
                     BoxShadow(
                       color: isSelected
-                          ? AppTheme.primary.withValues(alpha: 0.13)
+                          ? context.colors.primary.withValues(alpha: 0.13)
                           : Colors.black.withValues(alpha: 0.05),
                       blurRadius: isSelected ? 24 : 12,
                       offset: Offset(0, isSelected ? 8 : 2),
@@ -449,7 +449,7 @@ class SetupScreen extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 15.sp,
                         fontWeight: FontWeight.w700,
-                        color: isSelected ? AppTheme.primary : AppTheme.text,
+                        color: isSelected ? context.colors.primary : context.colors.text,
                       ),
                     ),
                     if (isSelected) ...[
@@ -459,7 +459,7 @@ class SetupScreen extends StatelessWidget {
                         height: 22.h,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          gradient: AppTheme.primaryGradient,
+                          gradient: context.colors.primaryGradient,
                         ),
                         child: Icon(Icons.check, size: 12, color: Colors.white),
                       ),
@@ -474,7 +474,7 @@ class SetupScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildActivityStep(HydrationProvider provider) {
+  Widget _buildActivityStep(BuildContext context, HydrationProvider provider) {
     final activities = [
       {
         'val': 'sedentary',
@@ -513,26 +513,26 @@ class SetupScreen extends StatelessWidget {
               duration: Duration(milliseconds: 200),
               padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
               decoration: BoxDecoration(
-                color: isSelected ? null : Colors.white,
+                color: isSelected ? null : context.colors.card,
                 gradient: isSelected
                     ? LinearGradient(
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                         colors: [
-                          AppTheme.primary.withValues(alpha: 0.08),
-                          AppTheme.accent.withValues(alpha: 0.06),
+                          context.colors.primary.withValues(alpha: 0.08),
+                          context.colors.accent.withValues(alpha: 0.06),
                         ],
                       )
                     : null,
                 borderRadius: BorderRadius.circular(18.r),
                 border: Border.all(
-                  color: isSelected ? AppTheme.primary : AppTheme.softLight,
+                  color: isSelected ? context.colors.primary : context.colors.softLight,
                   width: isSelected ? 2 : 1.5,
                 ),
                 boxShadow: [
                   BoxShadow(
                     color: isSelected
-                        ? AppTheme.primary.withValues(alpha: 0.12)
+                        ? context.colors.primary.withValues(alpha: 0.12)
                         : Colors.black.withValues(alpha: 0.04),
                     blurRadius: isSelected ? 20 : 8,
                     offset: Offset(0, isSelected ? 6 : 2),
@@ -546,8 +546,8 @@ class SetupScreen extends StatelessWidget {
                     height: 44.h,
                     decoration: BoxDecoration(
                       color: isSelected
-                          ? AppTheme.primary.withValues(alpha: 0.09)
-                          : AppTheme.softLight,
+                          ? context.colors.primary.withValues(alpha: 0.09)
+                          : context.colors.softLight,
                       borderRadius: BorderRadius.circular(14.r),
                     ),
                     child: Center(
@@ -568,8 +568,8 @@ class SetupScreen extends StatelessWidget {
                             fontSize: 14.sp,
                             fontWeight: FontWeight.w700,
                             color: isSelected
-                                ? AppTheme.primary
-                                : AppTheme.text,
+                                ? context.colors.primary
+                                : context.colors.text,
                           ),
                         ),
                         SizedBox(height: 2.h),
@@ -577,7 +577,7 @@ class SetupScreen extends StatelessWidget {
                           a['desc']!,
                           style: TextStyle(
                             fontSize: 11.sp,
-                            color: AppTheme.mutedLight,
+                            color: context.colors.mutedLight,
                           ),
                         ),
                       ],
@@ -589,7 +589,7 @@ class SetupScreen extends StatelessWidget {
                       height: 22.h,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        gradient: AppTheme.primaryGradient,
+                        gradient: context.colors.primaryGradient,
                       ),
                       child: Icon(Icons.check, size: 12, color: Colors.white),
                     ),
@@ -679,7 +679,7 @@ class _StatsStepWidgetState extends State<_StatsStepWidget> {
             style: TextStyle(
               fontSize: 14.sp,
               fontWeight: FontWeight.w700,
-              color: AppTheme.primaryDark,
+              color: context.colors.primaryDark,
             ),
           ),
           SizedBox(height: 8.h),
@@ -693,7 +693,7 @@ class _StatsStepWidgetState extends State<_StatsStepWidget> {
                   style: TextStyle(
                     fontSize: 24.sp,
                     fontWeight: FontWeight.w800,
-                    color: AppTheme.primaryDark,
+                    color: context.colors.primaryDark,
                   ),
                   decoration: InputDecoration(
                     contentPadding: EdgeInsets.symmetric(
@@ -701,19 +701,19 @@ class _StatsStepWidgetState extends State<_StatsStepWidget> {
                       vertical: 16.h,
                     ),
                     filled: true,
-                    fillColor: Colors.white,
+                    fillColor: context.colors.card,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(16.r),
-                      borderSide: BorderSide(color: AppTheme.soft, width: 2.w),
+                      borderSide: BorderSide(color: context.colors.soft, width: 2.w),
                     ),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(16.r),
-                      borderSide: BorderSide(color: AppTheme.soft, width: 2.w),
+                      borderSide: BorderSide(color: context.colors.soft, width: 2.w),
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(16.r),
                       borderSide: BorderSide(
-                        color: AppTheme.primary,
+                        color: context.colors.primary,
                         width: 2.w,
                       ),
                     ),
@@ -728,13 +728,13 @@ class _StatsStepWidgetState extends State<_StatsStepWidget> {
                     vertical: 4.h,
                   ),
                   decoration: BoxDecoration(
-                    color: AppTheme.primary.withValues(alpha: 0.1),
+                    color: context.colors.primary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12.r),
                   ),
                   child: DropdownButtonHideUnderline(
                     child: DropdownButton<String>(
                       value: currentUnit,
-                      dropdownColor: Colors.white,
+                      dropdownColor: context.colors.card,
                       borderRadius: BorderRadius.circular(12.r),
                       items: unitOptions
                           .map(
@@ -745,7 +745,7 @@ class _StatsStepWidgetState extends State<_StatsStepWidget> {
                                 style: TextStyle(
                                   fontSize: 16.sp,
                                   fontWeight: FontWeight.w700,
-                                  color: AppTheme.primary,
+                                  color: context.colors.primary,
                                 ),
                               ),
                             ),
@@ -767,7 +767,7 @@ class _StatsStepWidgetState extends State<_StatsStepWidget> {
                   alignment: Alignment.center,
                   padding: EdgeInsets.symmetric(vertical: 20.h),
                   decoration: BoxDecoration(
-                    color: AppTheme.softLight.withValues(alpha: 0.5),
+                    color: context.colors.softLight.withValues(alpha: 0.5),
                     borderRadius: BorderRadius.circular(12.r),
                   ),
                   child: Text(
@@ -775,7 +775,7 @@ class _StatsStepWidgetState extends State<_StatsStepWidget> {
                     style: TextStyle(
                       fontSize: 16.sp,
                       fontWeight: FontWeight.w700,
-                      color: AppTheme.mutedLight,
+                      color: context.colors.mutedLight,
                     ),
                   ),
                 ),
@@ -901,9 +901,9 @@ class _ScheduleStepWidget extends StatelessWidget {
       child: Container(
         padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 20.h),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: context.colors.card,
           borderRadius: BorderRadius.circular(20.r),
-          border: Border.all(color: AppTheme.softLight, width: 2),
+          border: Border.all(color: context.colors.softLight, width: 2),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.03),
@@ -918,7 +918,7 @@ class _ScheduleStepWidget extends StatelessWidget {
               width: 48.w,
               height: 48.h,
               decoration: BoxDecoration(
-                color: AppTheme.softLight,
+                color: context.colors.softLight,
                 borderRadius: BorderRadius.circular(14.r),
               ),
               child: Center(
@@ -932,7 +932,7 @@ class _ScheduleStepWidget extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 16.sp,
                   fontWeight: FontWeight.w700,
-                  color: AppTheme.primaryDark,
+                  color: context.colors.primaryDark,
                 ),
               ),
             ),
@@ -941,11 +941,11 @@ class _ScheduleStepWidget extends StatelessWidget {
               style: TextStyle(
                 fontSize: 20.sp,
                 fontWeight: FontWeight.w800,
-                color: AppTheme.primary,
+                color: context.colors.primary,
               ),
             ),
             SizedBox(width: 8.w),
-            Icon(Icons.edit_rounded, color: AppTheme.mutedLight, size: 18.sp),
+            Icon(Icons.edit_rounded, color: context.colors.mutedLight, size: 18.sp),
           ],
         ),
       ),

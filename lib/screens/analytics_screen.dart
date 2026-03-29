@@ -6,6 +6,7 @@ import '../providers/hydration_provider.dart';
 import '../widgets/bar_chart.dart';
 import '../widgets/spark_line.dart';
 import '../widgets/mini_bar.dart';
+import 'package:flutter/services.dart';
 
 class AnalyticsScreen extends StatelessWidget {
   const AnalyticsScreen({super.key});
@@ -30,7 +31,7 @@ class AnalyticsScreen extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 26.sp,
                       fontWeight: FontWeight.w800,
-                      color: AppTheme.primaryDark,
+                      color: context.colors.primaryDark,
                     ),
                   ),
                   SizedBox(height: 4.h),
@@ -38,7 +39,7 @@ class AnalyticsScreen extends StatelessWidget {
                     'Your hydration insights',
                     style: TextStyle(
                       fontSize: 13.sp, 
-                      color: AppTheme.mutedLight
+                      color: context.colors.mutedLight
                     ),
                   ),
                 ],
@@ -51,7 +52,7 @@ class AnalyticsScreen extends StatelessWidget {
               child: Container(
                 padding: EdgeInsets.all(4.w),
                 decoration: BoxDecoration(
-                  color: AppTheme.softLight,
+                  color: context.colors.softLight,
                   borderRadius: BorderRadius.circular(14.r),
                 ),
                 child: Row(
@@ -59,18 +60,21 @@ class AnalyticsScreen extends StatelessWidget {
                   children: ['Day', 'Week', 'Month'].map((p) {
                     final isActive = period == p.toLowerCase();
                     return GestureDetector(
-                      onTap: () => provider.setStatPeriod(p.toLowerCase()),
+                      onTap: () {
+                        HapticFeedback.lightImpact();
+                        provider.setStatPeriod(p.toLowerCase());
+                      },
                       child: AnimatedContainer(
-                        duration: Duration(milliseconds: 200),
+                        duration: const Duration(milliseconds: 150),
                         padding: EdgeInsets.symmetric(
                             horizontal: 18.w, vertical: 7.h),
                         decoration: BoxDecoration(
-                          color: isActive ? Colors.white : Colors.transparent,
+                          color: isActive ? context.colors.card : Colors.transparent,
                           borderRadius: BorderRadius.circular(10.r),
                           boxShadow: isActive
                               ? [
                                   BoxShadow(
-                                    color: AppTheme.primary.withValues(alpha: 0.12),
+                                    color: context.colors.primary.withValues(alpha: 0.12),
                                     blurRadius: 8,
                                     offset: Offset(0, 2),
                                   )
@@ -83,8 +87,8 @@ class AnalyticsScreen extends StatelessWidget {
                             fontSize: 12.sp,
                             fontWeight: FontWeight.w700,
                             color: isActive
-                                ? AppTheme.primary
-                                : AppTheme.mutedLight,
+                                ? context.colors.primary
+                                : context.colors.mutedLight,
                           ),
                         ),
                       ),
@@ -102,7 +106,7 @@ class AnalyticsScreen extends StatelessWidget {
                 child: Column(
                   children: [
                     // Bar chart card
-                    _buildCard(
+                    _buildCard(context,
                       child: Column(
                         children: [
                           Row(
@@ -117,28 +121,28 @@ class AnalyticsScreen extends StatelessWidget {
                                 style: TextStyle(
                                   fontWeight: FontWeight.w700,
                                   fontSize: 14.sp,
-                                  color: AppTheme.primaryDark,
+                                  color: context.colors.primaryDark,
                                 ),
                               ),
                               Container(
                                 padding: EdgeInsets.symmetric(
                                     horizontal: 10.w, vertical: 4.h),
                                 decoration: BoxDecoration(
-                                  color: AppTheme.success.withValues(alpha: 0.09),
+                                  color: context.colors.success.withValues(alpha: 0.09),
                                   borderRadius: BorderRadius.circular(8.r),
                                 ),
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     Icon(Icons.trending_up,
-                                        size: 11, color: AppTheme.success),
+                                        size: 11, color: context.colors.success),
                                     SizedBox(width: 4.w),
                                     Text(
                                       '+18%',
                                       style: TextStyle(
                                         fontSize: 11.sp,
                                         fontWeight: FontWeight.w700,
-                                        color: AppTheme.success,
+                                        color: context.colors.success,
                                       ),
                                     ),
                                   ],
@@ -148,18 +152,18 @@ class AnalyticsScreen extends StatelessWidget {
                           ),
                           SizedBox(height: 16.h),
                           SimpleBarChart(
-                            data: _getBarData(period),
+                            data: provider.getBarData(period),
                             labels: _getBarLabels(period),
                           ),
                           SizedBox(height: 16.h),
-                          _buildStatsSummary(period),
+                          _buildStatsSummary(context, period),
                         ],
                       ),
                     ),
                     SizedBox(height: 16.h),
 
                     // Trend line card
-                    _buildCard(
+                    _buildCard(context,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -168,13 +172,13 @@ class AnalyticsScreen extends StatelessWidget {
                             style: TextStyle(
                               fontWeight: FontWeight.w700,
                               fontSize: 14.sp,
-                              color: AppTheme.primaryDark,
+                              color: context.colors.primaryDark,
                             ),
                           ),
                           SizedBox(height: 14.h),
                           SparkLine(
-                            data: _getTrendData(period),
-                            color: AppTheme.primary,
+                            data: provider.getBarData(period),
+                            color: context.colors.primary,
                           ),
                         ],
                       ),
@@ -182,7 +186,7 @@ class AnalyticsScreen extends StatelessWidget {
                     SizedBox(height: 16.h),
 
                     // Drink breakdown card
-                    _buildCard(
+                    _buildCard(context,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -191,45 +195,54 @@ class AnalyticsScreen extends StatelessWidget {
                             style: TextStyle(
                               fontWeight: FontWeight.w700,
                               fontSize: 14.sp,
-                              color: AppTheme.primaryDark,
+                              color: context.colors.primaryDark,
                             ),
                           ),
                           SizedBox(height: 14.h),
-                          MiniBar(
-                              val: 1400,
-                              max: 2500,
-                              color: AppTheme.primary,
-                              label: 'Water',
-                              sub: '56%'),
-                          MiniBar(
-                              val: 500,
-                              max: 2500,
-                              color: AppTheme.accent,
-                              label: 'Tea / Coffee',
-                              sub: '20%'),
-                          MiniBar(
-                              val: 360,
-                              max: 2500,
-                              color: AppTheme.warning,
-                              label: 'Juice',
-                              sub: '14%'),
-                          MiniBar(
-                              val: 240,
-                              max: 2500,
-                              color: AppTheme.danger,
-                              label: 'Sports drinks',
-                              sub: '10%'),
+                          Builder(builder: (context) {
+                            final map = provider.drinkTypeBreakdown;
+                            final total = map.values.fold(0, (a, b) => a + b);
+                            final max = total == 0 ? 1 : total;
+                            return Column(
+                              children: [
+                                MiniBar(
+                                    val: map['Water']!.toDouble(),
+                                    max: max.toDouble(),
+                                    color: context.colors.primary,
+                                    label: 'Water',
+                                    sub: total > 0 ? '${(map['Water']! / total * 100).round()}%' : '0%'),
+                                MiniBar(
+                                    val: map['Tea / Coffee']!.toDouble(),
+                                    max: max.toDouble(),
+                                    color: context.colors.accent,
+                                    label: 'Tea / Coffee',
+                                    sub: total > 0 ? '${(map['Tea / Coffee']! / total * 100).round()}%' : '0%'),
+                                MiniBar(
+                                    val: map['Juice']!.toDouble(),
+                                    max: max.toDouble(),
+                                    color: context.colors.warning,
+                                    label: 'Juice',
+                                    sub: total > 0 ? '${(map['Juice']! / total * 100).round()}%' : '0%'),
+                                MiniBar(
+                                    val: map['Sports drinks']!.toDouble(),
+                                    max: max.toDouble(),
+                                    color: context.colors.danger,
+                                    label: 'Sports drinks',
+                                    sub: total > 0 ? '${(map['Sports drinks']! / total * 100).round()}%' : '0%'),
+                              ],
+                            );
+                          }),
                         ],
                       ),
                     ),
                     SizedBox(height: 16.h),
 
                     // Streak card
-                    _buildStreakCard(),
+                    _buildStreakCard(context, provider),
                     SizedBox(height: 16.h),
 
                     // Hydration score card
-                    _buildScoreCard(),
+                    _buildScoreCard(context),
                   ],
                 ),
               ),
@@ -240,17 +253,17 @@ class AnalyticsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildCard({required Widget child}) {
+  Widget _buildCard(BuildContext context, {required Widget child}) {
     return Container(
       width: double.infinity,
       padding: EdgeInsets.all(16.w),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.colors.card,
         borderRadius: BorderRadius.circular(20.r),
-        border: Border.all(color: AppTheme.softLight),
+        border: Border.all(color: context.colors.softLight),
         boxShadow: [
           BoxShadow(
-            color: AppTheme.primary.withValues(alpha: 0.07),
+            color: context.colors.primary.withValues(alpha: 0.07),
             blurRadius: 16,
             offset: Offset(0, 2),
           ),
@@ -260,7 +273,7 @@ class AnalyticsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildStatsSummary(String period) {
+  Widget _buildStatsSummary(BuildContext context, String period) {
     final stats = period == 'day'
         ? [
             ['💧', '285 ml', 'Avg'],
@@ -286,7 +299,7 @@ class AnalyticsScreen extends StatelessWidget {
             margin: EdgeInsets.symmetric(horizontal: 5.w),
             padding: EdgeInsets.symmetric(vertical: 10.h, horizontal: 6.w),
             decoration: BoxDecoration(
-              color: AppTheme.softLight,
+              color: context.colors.softLight,
               borderRadius: BorderRadius.circular(12.r),
             ),
             child: Column(
@@ -298,12 +311,12 @@ class AnalyticsScreen extends StatelessWidget {
                   style: TextStyle(
                     fontWeight: FontWeight.w700,
                     fontSize: 12.sp,
-                    color: AppTheme.primaryDark,
+                    color: context.colors.primaryDark,
                   ),
                 ),
                 Text(
                   s[2],
-                  style: TextStyle(fontSize: 10.sp, color: AppTheme.mutedLight),
+                  style: TextStyle(fontSize: 10.sp, color: context.colors.mutedLight),
                 ),
               ],
             ),
@@ -313,7 +326,7 @@ class AnalyticsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildStreakCard() {
+  Widget _buildStreakCard(BuildContext context, HydrationProvider provider) {
     return Container(
       width: double.infinity,
       padding: EdgeInsets.all(16.w),
@@ -322,13 +335,13 @@ class AnalyticsScreen extends StatelessWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            AppTheme.primary.withValues(alpha: 0.06),
-            AppTheme.accent.withValues(alpha: 0.05),
+            context.colors.primary.withValues(alpha: 0.06),
+            context.colors.accent.withValues(alpha: 0.05),
           ],
         ),
         borderRadius: BorderRadius.circular(20.r),
         border: Border.all(
-          color: AppTheme.seafoam.withValues(alpha: 0.27),
+          color: context.colors.seafoam.withValues(alpha: 0.27),
         ),
       ),
       child: Row(
@@ -337,13 +350,13 @@ class AnalyticsScreen extends StatelessWidget {
             width: 52.w,
             height: 52.h,
             decoration: BoxDecoration(
-              color: AppTheme.warning.withValues(alpha: 0.13),
+              color: context.colors.warning.withValues(alpha: 0.13),
               borderRadius: BorderRadius.circular(18.r),
             ),
             child: Icon(
               Icons.local_fire_department_rounded,
               size: 28,
-              color: AppTheme.warning,
+              color: context.colors.warning,
             ),
           ),
           SizedBox(width: 16.w),
@@ -352,16 +365,16 @@ class AnalyticsScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '7 Day Streak!',
+                  '${provider.userData.streak} Day Streak!',
                   style: TextStyle(
                     fontSize: 22.sp,
                     fontWeight: FontWeight.w800,
-                    color: AppTheme.primaryDark,
+                    color: context.colors.primaryDark,
                   ),
                 ),
                 Text(
                   "You're on a roll. Keep it up!",
-                  style: TextStyle(fontSize: 12.sp, color: AppTheme.mutedLight),
+                  style: TextStyle(fontSize: 12.sp, color: context.colors.mutedLight),
                 ),
                 SizedBox(height: 8.h),
                 Row(
@@ -371,7 +384,7 @@ class AnalyticsScreen extends StatelessWidget {
                       height: 26.h,
                       margin: EdgeInsets.only(right: 5.w),
                       decoration: BoxDecoration(
-                        gradient: AppTheme.primaryGradient,
+                        gradient: context.colors.primaryGradient,
                         borderRadius: BorderRadius.circular(8.r),
                       ),
                       child: Icon(Icons.check, size: 11, color: Colors.white),
@@ -386,8 +399,8 @@ class AnalyticsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildScoreCard() {
-    return _buildCard(
+  Widget _buildScoreCard(BuildContext context) {
+    return _buildCard(context,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -396,7 +409,7 @@ class AnalyticsScreen extends StatelessWidget {
             style: TextStyle(
               fontWeight: FontWeight.w700,
               fontSize: 14.sp,
-              color: AppTheme.primaryDark,
+              color: context.colors.primaryDark,
             ),
           ),
           SizedBox(height: 14.h),
@@ -409,13 +422,13 @@ class AnalyticsScreen extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 52.sp,
                       fontWeight: FontWeight.w800,
-                      color: AppTheme.primary,
+                      color: context.colors.primary,
                       height: 1.h,
                     ),
                   ),
                   Text(
                     '/100',
-                    style: TextStyle(fontSize: 11.sp, color: AppTheme.mutedLight),
+                    style: TextStyle(fontSize: 11.sp, color: context.colors.mutedLight),
                   ),
                 ],
               ),
@@ -429,7 +442,7 @@ class AnalyticsScreen extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 13.sp,
                         fontWeight: FontWeight.w600,
-                        color: AppTheme.primaryDark,
+                        color: context.colors.primaryDark,
                       ),
                     ),
                     SizedBox(height: 6.h),
@@ -437,7 +450,7 @@ class AnalyticsScreen extends StatelessWidget {
                       "You're consistently hitting 80%+ of your daily goal. Aim for 2,500ml to reach 100.",
                       style: TextStyle(
                         fontSize: 12.sp,
-                        color: AppTheme.mutedLight,
+                        color: context.colors.mutedLight,
                         height: 1.5.h,
                       ),
                     ),
@@ -451,21 +464,9 @@ class AnalyticsScreen extends StatelessWidget {
     );
   }
 
-  List<double> _getBarData(String period) {
-    if (period == 'day') return [200, 300, 180, 400, 250, 180, 290];
-    if (period == 'week') return [1800, 2100, 2400, 1950, 2600, 2200, 1290];
-    return [2100, 1950, 2300, 2450, 2200, 2500, 2350, 2600, 2400, 2700, 2500, 2800, 1290];
-  }
-
   List<String> _getBarLabels(String period) {
     if (period == 'day') return ['8am', '10', '12', '2pm', '4', '6', '8'];
-    if (period == 'week') return ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    return ['W1', '', 'W2', '', 'W3', '', 'W4', '', 'W5', '', 'W6', '', ''];
-  }
-
-  List<double> _getTrendData(String period) {
-    if (period == 'day') return [200, 300, 180, 400, 250, 180, 290];
-    if (period == 'week') return [1800, 2100, 2400, 1950, 2600, 2200, 1290];
-    return [1600, 1800, 2000, 1700, 2100, 2300, 2200, 2400, 2500, 2300, 2600, 2400, 2500, 2200, 2600, 2800, 2500, 2700, 2600, 2900, 2800, 2600, 2750, 2800, 2600, 2900, 2700, 2500, 2800, 1290];
+    if (period == 'week') return ['1', '2', '3', '4', '5', '6', '7'];
+    return ['1', '', '2', '', '3', '', '4', '', '5', '', '6', '', ''];
   }
 }

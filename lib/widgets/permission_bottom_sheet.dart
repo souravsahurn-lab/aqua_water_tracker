@@ -65,7 +65,7 @@ class _PermissionBottomSheetState extends State<PermissionBottomSheet> {
     return Container(
       padding: EdgeInsets.fromLTRB(28.w, 32.h, 28.w, 40.h),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.colors.card,
         borderRadius: BorderRadius.vertical(top: Radius.circular(32.r)),
       ),
       child: Column(
@@ -78,7 +78,7 @@ class _PermissionBottomSheetState extends State<PermissionBottomSheet> {
               width: 48.w,
               height: 5.h,
               decoration: BoxDecoration(
-                color: AppTheme.soft,
+                color: context.colors.soft,
                 borderRadius: BorderRadius.circular(10.r),
               ),
             ),
@@ -91,12 +91,12 @@ class _PermissionBottomSheetState extends State<PermissionBottomSheet> {
               Container(
                 padding: EdgeInsets.all(12.w),
                 decoration: BoxDecoration(
-                  color: AppTheme.primary.withValues(alpha: 0.1),
+                  color: context.colors.primary.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(16.r),
                 ),
                 child: Icon(
                   Icons.vpn_key_rounded,
-                  color: AppTheme.primary,
+                  color: context.colors.primary,
                   size: 24.sp,
                 ),
               ),
@@ -110,7 +110,7 @@ class _PermissionBottomSheetState extends State<PermissionBottomSheet> {
                       style: TextStyle(
                         fontSize: 20.sp,
                         fontWeight: FontWeight.w800,
-                        color: AppTheme.primaryDark,
+                        color: context.colors.primaryDark,
                         letterSpacing: -0.5,
                       ),
                     ),
@@ -118,7 +118,7 @@ class _PermissionBottomSheetState extends State<PermissionBottomSheet> {
                       'Optimizing your hydration journey',
                       style: TextStyle(
                         fontSize: 12.sp,
-                        color: AppTheme.mutedLight,
+                        color: context.colors.mutedLight,
                       ),
                     ),
                   ],
@@ -133,7 +133,7 @@ class _PermissionBottomSheetState extends State<PermissionBottomSheet> {
             style: TextStyle(
               fontSize: 13.sp,
               height: 1.5,
-              color: AppTheme.text.withValues(alpha: 0.7),
+              color: context.colors.text.withValues(alpha: 0.7),
             ),
           ),
           SizedBox(height: 24.h),
@@ -146,14 +146,14 @@ class _PermissionBottomSheetState extends State<PermissionBottomSheet> {
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  AppTheme.primary,
-                  AppTheme.accent,
+                  context.colors.primary,
+                  context.colors.accent,
                 ],
               ),
               borderRadius: BorderRadius.circular(24.r),
               boxShadow: [
                 BoxShadow(
-                  color: AppTheme.primary.withValues(alpha: 0.3),
+                  color: context.colors.primary.withValues(alpha: 0.3),
                   blurRadius: 20,
                   offset: Offset(0, 8),
                 ),
@@ -209,7 +209,7 @@ class _PermissionBottomSheetState extends State<PermissionBottomSheet> {
             style: TextStyle(
               fontSize: 14.sp,
               fontWeight: FontWeight.w800,
-              color: AppTheme.primaryDark,
+              color: context.colors.primaryDark,
               letterSpacing: 0.5,
             ),
           ),
@@ -255,7 +255,7 @@ class _PermissionBottomSheetState extends State<PermissionBottomSheet> {
                 style: TextStyle(
                   fontSize: 13.sp,
                   fontWeight: FontWeight.w600,
-                  color: AppTheme.mutedLight,
+                  color: context.colors.mutedLight,
                 ),
               ),
             ),
@@ -290,13 +290,13 @@ class _PermissionItem extends StatelessWidget {
         padding: EdgeInsets.all(16.w),
         decoration: BoxDecoration(
           color: isGranted
-              ? AppTheme.success.withValues(alpha: 0.05)
-              : AppTheme.softLight.withValues(alpha: 0.3),
+              ? context.colors.success.withValues(alpha: 0.05)
+              : context.colors.softLight.withValues(alpha: 0.3),
           borderRadius: BorderRadius.circular(20.r),
           border: Border.all(
             color: isGranted
-                ? AppTheme.success.withValues(alpha: 0.2)
-                : AppTheme.soft,
+                ? context.colors.success.withValues(alpha: 0.2)
+                : context.colors.soft,
             width: 1.5,
           ),
         ),
@@ -305,12 +305,12 @@ class _PermissionItem extends StatelessWidget {
             Container(
               padding: EdgeInsets.all(10.w),
               decoration: BoxDecoration(
-                color: isGranted ? AppTheme.success : AppTheme.primary.withValues(alpha: 0.1),
+                color: isGranted ? context.colors.success : context.colors.primary.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: Icon(
                 isGranted ? Icons.check_rounded : icon,
-                color: isGranted ? Colors.white : AppTheme.primary,
+                color: isGranted ? Colors.white : context.colors.primary,
                 size: 20.sp,
               ),
             ),
@@ -324,7 +324,7 @@ class _PermissionItem extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 14.sp,
                       fontWeight: FontWeight.w700,
-                      color: AppTheme.primaryDark,
+                      color: context.colors.primaryDark,
                     ),
                   ),
                   SizedBox(height: 2.h),
@@ -332,7 +332,7 @@ class _PermissionItem extends StatelessWidget {
                     desc,
                     style: TextStyle(
                       fontSize: 11.sp,
-                      color: AppTheme.muted,
+                      color: context.colors.muted,
                       height: 1.3,
                     ),
                   ),
@@ -343,7 +343,7 @@ class _PermissionItem extends StatelessWidget {
               Container(
                 padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.h),
                 decoration: BoxDecoration(
-                  color: AppTheme.primary,
+                  color: context.colors.primary,
                   borderRadius: BorderRadius.circular(10.r),
                 ),
                 child: Text(

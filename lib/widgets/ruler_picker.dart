@@ -68,7 +68,7 @@ class _RulerPickerState extends State<RulerPicker> {
 
   @override
   Widget build(BuildContext context) {
-    final col = widget.color ?? AppTheme.primary;
+    final col = widget.color ?? context.colors.primary;
     const itemH = 46.0;
     const visibleCount = 5;
 
@@ -79,7 +79,7 @@ class _RulerPickerState extends State<RulerPicker> {
           style: TextStyle(
             fontSize: 11.sp,
             fontWeight: FontWeight.w700,
-            color: AppTheme.mutedLight,
+            color: context.colors.mutedLight,
             letterSpacing: 1.4,
           ),
         ),
@@ -87,7 +87,7 @@ class _RulerPickerState extends State<RulerPicker> {
         Container(
           height: itemH * visibleCount,
           decoration: BoxDecoration(
-            color: AppTheme.softLight,
+            color: context.colors.softLight,
             borderRadius: BorderRadius.circular(22.r),
             border: Border.all(color: col.withValues(alpha: 0.13), width: 1.5.w),
           ),
@@ -187,8 +187,8 @@ class _RulerPickerState extends State<RulerPicker> {
                             begin: Alignment.topCenter,
                             end: Alignment.bottomCenter,
                             colors: [
-                              AppTheme.softLight,
-                              AppTheme.softLight.withValues(alpha: 0),
+                              context.colors.softLight,
+                              context.colors.softLight.withValues(alpha: 0),
                             ],
                             stops: const [0.3, 1.0],
                           ),
@@ -209,8 +209,8 @@ class _RulerPickerState extends State<RulerPicker> {
                             begin: Alignment.bottomCenter,
                             end: Alignment.topCenter,
                             colors: [
-                              AppTheme.softLight,
-                              AppTheme.softLight.withValues(alpha: 0),
+                              context.colors.softLight,
+                              context.colors.softLight.withValues(alpha: 0),
                             ],
                             stops: const [0.3, 1.0],
                           ),

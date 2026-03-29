@@ -4,12 +4,14 @@ import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
 import '../providers/hydration_provider.dart';
 import '../widgets/app_button.dart';
+import 'package:flutter/services.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Consumer<HydrationProvider>(
       builder: (context, provider, _) {
         final userData = provider.userData;
@@ -30,13 +32,13 @@ class SettingsScreen extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 26.sp,
                         fontWeight: FontWeight.w800,
-                        color: AppTheme.primaryDark,
+                        color: c.primaryDark,
                       ),
                     ),
                     SizedBox(height: 4.h),
                     Text(
                       'Manage your preferences',
-                      style: TextStyle(fontSize: 13.sp, color: AppTheme.mutedLight),
+                      style: TextStyle(fontSize: 13.sp, color: c.mutedLight),
                     ),
                   ],
                 ),
@@ -54,7 +56,7 @@ class SettingsScreen extends StatelessWidget {
                       width: double.infinity,
                       padding: EdgeInsets.all(20.w),
                       decoration: BoxDecoration(
-                        gradient: AppTheme.headerGradient,
+                        gradient: c.headerGradient,
                         borderRadius: BorderRadius.circular(22.r),
                       ),
                       child: Stack(
@@ -123,24 +125,28 @@ class SettingsScreen extends StatelessWidget {
                     SizedBox(height: 20.h),
 
                     // Hydration section
-                    _sectionTitle('Hydration'),
+                    _sectionTitle('Hydration', c),
                     _buildCard(
+                      c: c,
                       children: [
                         _settingRow(
+                          c: c,
                           icon: Icons.gps_fixed_rounded,
-                          iconColor: AppTheme.primary,
+                          iconColor: c.primary,
                           label: 'Daily Goal',
                           value: '${userData.goal} ml',
                         ),
                         _settingRow(
+                          c: c,
                           icon: null,
                           emoji: '⚖️',
                           label: 'Weight',
                           value: '${userData.weight} kg',
                         ),
                         _settingRow(
+                          c: c,
                           icon: Icons.bolt_rounded,
-                          iconColor: AppTheme.warning,
+                          iconColor: c.warning,
                           label: 'Activity',
                           value: userData.activity,
                           isLast: true,
@@ -150,23 +156,27 @@ class SettingsScreen extends StatelessWidget {
                     SizedBox(height: 16.h),
 
                     // Notifications section
-                    _sectionTitle('Notifications'),
+                    _sectionTitle('Notifications', c),
                     _buildCard(
+                      c: c,
                       children: [
                         _toggleRow(
+                          c: c,
                           icon: Icons.notifications_rounded,
-                          iconColor: AppTheme.primary,
+                          iconColor: c.primary,
                           label: 'Push Reminders',
                           value: userData.reminders,
                           onChanged: provider.toggleReminders,
                         ),
                         _toggleRow(
+                          c: c,
                           emoji: '🎵',
                           label: 'Sound Alerts',
                           value: userData.sound,
                           onChanged: provider.toggleSound,
                         ),
                         _toggleRow(
+                          c: c,
                           emoji: '📳',
                           label: 'Vibration',
                           value: userData.vibration,
@@ -178,10 +188,12 @@ class SettingsScreen extends StatelessWidget {
                     SizedBox(height: 16.h),
 
                     // Appearance section
-                    _sectionTitle('Appearance'),
+                    _sectionTitle('Appearance', c),
                     _buildCard(
+                      c: c,
                       children: [
                         _toggleRow(
+                          c: c,
                           emoji: '🌙',
                           label: 'Dark Mode',
                           value: userData.darkMode,
@@ -193,12 +205,14 @@ class SettingsScreen extends StatelessWidget {
                     SizedBox(height: 16.h),
 
                     // More section
-                    _sectionTitle('More'),
+                    _sectionTitle('More', c),
                     _buildCard(
+                      c: c,
                       children: [
-                        _settingRow(emoji: '📤', label: 'Export Data', value: 'CSV / PDF'),
-                        _settingRow(emoji: '🔒', label: 'Privacy', value: 'Manage'),
+                        _settingRow(c: c, emoji: '📤', label: 'Export Data', value: 'CSV / PDF'),
+                        _settingRow(c: c, emoji: '🔒', label: 'Privacy', value: 'Manage'),
                         _settingRow(
+                          c: c,
                           emoji: 'ℹ️',
                           label: 'App Version',
                           value: '1.0.0',
@@ -212,14 +226,15 @@ class SettingsScreen extends StatelessWidget {
                     AppButton(
                       text: 'Reset All Data',
                       onPressed: () async {
+                        HapticFeedback.lightImpact();
                         await provider.resetApp();
                         if (context.mounted) {
                           Navigator.of(context).pushNamedAndRemoveUntil('/splash', (route) => false);
                         }
                       },
                       variant: AppButtonVariant.secondary,
-                      backgroundColor: AppTheme.danger.withValues(alpha: 0.07),
-                      textColor: AppTheme.danger,
+                      backgroundColor: c.danger.withValues(alpha: 0.07),
+                      textColor: c.danger,
                     ),
                   ],
                 ),
@@ -231,7 +246,7 @@ class SettingsScreen extends StatelessWidget {
     );
   }
 
-  Widget _sectionTitle(String title) {
+  Widget _sectionTitle(String title, AppColors c) {
     return Padding(
       padding: EdgeInsets.only(left: 4.w, bottom: 8.h),
       child: Text(
@@ -239,24 +254,24 @@ class SettingsScreen extends StatelessWidget {
         style: TextStyle(
           fontSize: 11.sp,
           fontWeight: FontWeight.w700,
-          color: AppTheme.mutedLight,
+          color: c.mutedLight,
           letterSpacing: 1.2,
         ),
       ),
     );
   }
 
-  Widget _buildCard({required List<Widget> children}) {
+  Widget _buildCard({required AppColors c, required List<Widget> children}) {
     return Container(
       width: double.infinity,
       padding: EdgeInsets.symmetric(horizontal: 16.w),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: c.card,
         borderRadius: BorderRadius.circular(20.r),
-        border: Border.all(color: AppTheme.softLight),
+        border: Border.all(color: c.softLight),
         boxShadow: [
           BoxShadow(
-            color: AppTheme.primary.withValues(alpha: 0.07),
+            color: c.primary.withValues(alpha: 0.07),
             blurRadius: 16,
             offset: Offset(0, 2),
           ),
@@ -267,6 +282,7 @@ class SettingsScreen extends StatelessWidget {
   }
 
   Widget _settingRow({
+    required AppColors c,
     IconData? icon,
     Color? iconColor,
     String? emoji,
@@ -280,7 +296,7 @@ class SettingsScreen extends StatelessWidget {
         border: isLast
             ? null
             : Border(
-                bottom: BorderSide(color: AppTheme.softLight, width: 1.w),
+                bottom: BorderSide(color: c.softLight, width: 1.w),
               ),
       ),
       child: Row(
@@ -291,7 +307,7 @@ class SettingsScreen extends StatelessWidget {
               child: Text(emoji, style: TextStyle(fontSize: 18.sp)),
             )
           else if (icon != null)
-            Icon(icon, size: 18, color: iconColor ?? AppTheme.primary),
+            Icon(icon, size: 18, color: iconColor ?? c.primary),
           SizedBox(width: 12.w),
           Expanded(
             child: Text(
@@ -299,23 +315,24 @@ class SettingsScreen extends StatelessWidget {
               style: TextStyle(
                 fontSize: 14.sp,
                 fontWeight: FontWeight.w500,
-                color: AppTheme.text,
+                color: c.text,
               ),
             ),
           ),
           Text(
             value,
-            style: TextStyle(fontSize: 13.sp, color: AppTheme.mutedLight),
+            style: TextStyle(fontSize: 13.sp, color: c.mutedLight),
           ),
           SizedBox(width: 4.w),
           Icon(Icons.chevron_right_rounded,
-              size: 14, color: AppTheme.mutedLight),
+              size: 14, color: c.mutedLight),
         ],
       ),
     );
   }
 
   Widget _toggleRow({
+    required AppColors c,
     IconData? icon,
     Color? iconColor,
     String? emoji,
@@ -330,7 +347,7 @@ class SettingsScreen extends StatelessWidget {
         border: isLast
             ? null
             : Border(
-                bottom: BorderSide(color: AppTheme.softLight, width: 1.w),
+                bottom: BorderSide(color: c.softLight, width: 1.w),
               ),
       ),
       child: Row(
@@ -341,7 +358,7 @@ class SettingsScreen extends StatelessWidget {
               child: Text(emoji, style: TextStyle(fontSize: 18.sp)),
             )
           else if (icon != null)
-            Icon(icon, size: 18, color: iconColor ?? AppTheme.primary),
+            Icon(icon, size: 18, color: iconColor ?? c.primary),
           SizedBox(width: 12.w),
           Expanded(
             child: Text(
@@ -349,24 +366,27 @@ class SettingsScreen extends StatelessWidget {
               style: TextStyle(
                 fontSize: 14.sp,
                 fontWeight: FontWeight.w500,
-                color: AppTheme.text,
+                color: c.text,
               ),
             ),
           ),
           GestureDetector(
-            onTap: () => onChanged(!value),
+            onTap: () {
+              HapticFeedback.lightImpact();
+              onChanged(!value);
+            },
             child: AnimatedContainer(
-              duration: Duration(milliseconds: 250),
+              duration: const Duration(milliseconds: 150),
               width: 46.w,
               height: 26.h,
               decoration: BoxDecoration(
-                gradient: value ? AppTheme.primaryGradient : null,
-                color: value ? null : AppTheme.softLight,
+                gradient: value ? c.primaryGradient : null,
+                color: value ? null : c.softLight,
                 borderRadius: BorderRadius.circular(13.r),
                 boxShadow: value
                     ? [
                         BoxShadow(
-                          color: AppTheme.primary.withValues(alpha: 0.25),
+                          color: c.primary.withValues(alpha: 0.25),
                           blurRadius: 8,
                           offset: Offset(0, 2),
                         )
@@ -374,7 +394,7 @@ class SettingsScreen extends StatelessWidget {
                     : null,
               ),
               child: AnimatedAlign(
-                duration: Duration(milliseconds: 250),
+                duration: const Duration(milliseconds: 150),
                 alignment:
                     value ? Alignment.centerRight : Alignment.centerLeft,
                 child: Container(

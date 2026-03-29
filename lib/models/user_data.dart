@@ -14,6 +14,8 @@ class UserData {
   bool darkMode;
   String gender;
   int streak;
+  String lastActiveDate;
+  int reminderIntervalMin;
 
   UserData({
     this.name = '',
@@ -31,7 +33,9 @@ class UserData {
     this.darkMode = false,
     this.gender = 'male',
     this.streak = 0,
-  });
+    String? lastActiveDate,
+    this.reminderIntervalMin = 120,
+  }) : lastActiveDate = lastActiveDate ?? DateTime.now().toIso8601String().split('T')[0];
 
   factory UserData.fromJson(Map<String, dynamic> json) {
     return UserData(
@@ -50,6 +54,8 @@ class UserData {
       darkMode: json['darkMode'] as bool? ?? false,
       gender: json['gender'] as String? ?? 'male',
       streak: json['streak'] as int? ?? 0,
+      lastActiveDate: json['lastActiveDate'] as String?,
+      reminderIntervalMin: json['reminderIntervalMin'] as int? ?? 120,
     );
   }
 
@@ -70,6 +76,8 @@ class UserData {
       'darkMode': darkMode,
       'gender': gender,
       'streak': streak,
+      'lastActiveDate': lastActiveDate,
+      'reminderIntervalMin': reminderIntervalMin,
     };
   }
 }

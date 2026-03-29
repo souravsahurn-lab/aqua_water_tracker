@@ -1,6 +1,7 @@
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
+import 'package:flutter/services.dart';
 
 enum AppButtonVariant { primary, ghost, secondary }
 
@@ -37,7 +38,12 @@ class _AppButtonState extends State<AppButton> {
       onTapDown: widget.onPressed == null ? null : (_) => setState(() => _scale = 0.97),
       onTapUp: widget.onPressed == null ? null : (_) => setState(() => _scale = 1.0),
       onTapCancel: widget.onPressed == null ? null : () => setState(() => _scale = 1.0),
-      onTap: widget.onPressed,
+      onTap: () {
+        if (widget.onPressed != null) {
+          HapticFeedback.lightImpact();
+          widget.onPressed!();
+        }
+      },
       child: AnimatedScale(
         scale: _scale,
         duration: Duration(milliseconds: 150),
@@ -46,18 +52,18 @@ class _AppButtonState extends State<AppButton> {
           padding: widget.padding ?? EdgeInsets.symmetric(vertical: 15.h),
           decoration: BoxDecoration(
             gradient: widget.variant == AppButtonVariant.primary
-                ? AppTheme.primaryGradient
+                ? context.colors.primaryGradient
                 : null,
             color: widget.variant == AppButtonVariant.ghost
                 ? Colors.transparent
                 : widget.variant == AppButtonVariant.secondary
-                    ? widget.backgroundColor ?? AppTheme.softLight
+                    ? widget.backgroundColor ?? context.colors.softLight
                     : null,
             borderRadius: BorderRadius.circular(18.r),
             boxShadow: widget.variant == AppButtonVariant.primary
                 ? [
                     BoxShadow(
-                      color: AppTheme.primary.withValues(alpha: 0.27),
+                      color: context.colors.primary.withValues(alpha: 0.27),
                       blurRadius: 28,
                       offset: Offset(0, 8),
                     ),
@@ -75,8 +81,8 @@ class _AppButtonState extends State<AppButton> {
                   (widget.variant == AppButtonVariant.primary
                       ? Colors.white
                       : widget.variant == AppButtonVariant.ghost
-                          ? AppTheme.primary
-                          : AppTheme.text),
+                          ? context.colors.primary
+                          : context.colors.text),
             ),
           ),
         ),

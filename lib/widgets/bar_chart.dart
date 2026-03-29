@@ -35,10 +35,10 @@ class SimpleBarChart extends StatelessWidget {
                           ? LinearGradient(
                               begin: Alignment.topCenter,
                               end: Alignment.bottomCenter,
-                              colors: [AppTheme.seafoam, AppTheme.primary],
+                              colors: [context.colors.seafoam, context.colors.primary],
                             )
                           : null,
-                      color: isLast ? null : AppTheme.primary.withValues(alpha: 0.15),
+                      color: isLast ? null : context.colors.primary.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.vertical(
                         top: Radius.circular(5.r),
                         bottom: Radius.circular(3.r),
@@ -46,7 +46,7 @@ class SimpleBarChart extends StatelessWidget {
                       boxShadow: isLast
                           ? [
                               BoxShadow(
-                                color: AppTheme.primary.withValues(alpha: 0.25),
+                                color: context.colors.primary.withValues(alpha: 0.25),
                                 blurRadius: 12,
                                 offset: Offset(0, 4),
                               )
@@ -60,7 +60,7 @@ class SimpleBarChart extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 9.sp,
                       fontWeight: isLast ? FontWeight.w700 : FontWeight.w400,
-                      color: isLast ? AppTheme.primary : AppTheme.mutedLight,
+                      color: isLast ? context.colors.primary : context.colors.mutedLight,
                     ),
                   ),
                 ],

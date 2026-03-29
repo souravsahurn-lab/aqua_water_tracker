@@ -6,6 +6,7 @@ import '../theme/app_theme.dart';
 import '../providers/hydration_provider.dart';
 import '../widgets/water_bottle.dart';
 import '../widgets/wave_decoration.dart';
+import 'package:flutter/services.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -54,10 +55,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Good morning 👋',
+                              '${provider.getGreeting().replaceAll(',', '')} 👋',
                               style: TextStyle(
                                 fontSize: 13.sp,
-                                color: AppTheme.mutedLight,
+                                color: context.colors.mutedLight,
                               ),
                             ),
                             Text(
@@ -67,7 +68,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               style: TextStyle(
                                 fontSize: 24.sp,
                                 fontWeight: FontWeight.w800,
-                                color: AppTheme.primaryDark,
+                                color: context.colors.primaryDark,
                                 letterSpacing: -0.5,
                               ),
                             ),
@@ -81,11 +82,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 vertical: 6.h,
                               ),
                               decoration: BoxDecoration(
-                                color: Colors.white,
+                                color: context.colors.card,
                                 borderRadius: BorderRadius.circular(20.r),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: AppTheme.warning.withValues(
+                                    color: context.colors.warning.withValues(
                                       alpha: 0.08,
                                     ),
                                     blurRadius: 10,
@@ -93,7 +94,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   ),
                                 ],
                                 border: Border.all(
-                                  color: AppTheme.warning.withValues(
+                                  color: context.colors.warning.withValues(
                                     alpha: 0.15,
                                   ),
                                   width: 1.w,
@@ -108,7 +109,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                     style: TextStyle(
                                       fontSize: 14.sp,
                                       fontWeight: FontWeight.w800,
-                                      color: AppTheme.warning,
+                                      color: context.colors.warning,
                                     ),
                                   ),
                                 ],
@@ -119,11 +120,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               width: 44.w,
                               height: 44.h,
                               decoration: BoxDecoration(
-                                color: Colors.white,
+                                color: context.colors.card,
                                 shape: BoxShape.circle,
                                 boxShadow: [
                                   BoxShadow(
-                                    color: AppTheme.primary.withValues(
+                                    color: context.colors.primary.withValues(
                                       alpha: 0.08,
                                     ),
                                     blurRadius: 16,
@@ -131,13 +132,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   ),
                                 ],
                                 border: Border.all(
-                                  color: AppTheme.softLight,
+                                  color: context.colors.softLight,
                                   width: 1.w,
                                 ),
                               ),
                               child: Icon(
                                 Icons.person_rounded,
-                                color: AppTheme.primary,
+                                color: context.colors.primary,
                                 size: 22.sp,
                               ),
                             ),
@@ -151,11 +152,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     Container(
                       width: double.infinity,
                       decoration: BoxDecoration(
-                        gradient: AppTheme.headerGradient,
+                        gradient: context.colors.headerGradient,
                         borderRadius: BorderRadius.circular(32.r),
                         boxShadow: [
                           BoxShadow(
-                            color: AppTheme.primary.withValues(alpha: 0.22),
+                            color: context.colors.primary.withValues(alpha: 0.22),
                             blurRadius: 24,
                             offset: const Offset(0, 10),
                           ),
@@ -168,10 +169,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           child: Container(
                             decoration: BoxDecoration(
                               gradient: LinearGradient(
-                                begin: AppTheme.headerGradient.begin,
-                                end: AppTheme.headerGradient.end,
-                                stops: AppTheme.headerGradient.stops,
-                                colors: AppTheme.headerGradient.colors
+                                begin: context.colors.headerGradient.begin,
+                                end: context.colors.headerGradient.end,
+                                stops: context.colors.headerGradient.stops,
+                                colors: context.colors.headerGradient.colors
                                     .map((c) => c.withValues(alpha: 0.92))
                                     .toList(),
                               ),
@@ -382,7 +383,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       style: TextStyle(
                         fontSize: 11.sp,
                         fontWeight: FontWeight.w700,
-                        color: AppTheme.mutedLight,
+                        color: context.colors.mutedLight,
                         letterSpacing: 1.2,
                         height: 1.0,
                       ),
@@ -425,21 +426,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
       childAspectRatio: 2.7,
       children: items.map((item) {
         return Material(
-          color: Colors.white,
+          color: context.colors.card,
           borderRadius: BorderRadius.circular(18.r),
           elevation: 0,
           child: InkWell(
-            onTap: () => provider.drinkWater(
-              item['val'] as int,
-              label: item['label'] as String,
-              icon: item['icon'] as String,
-            ),
+            onTap: () {
+              HapticFeedback.lightImpact();
+              provider.drinkWater(
+                item['val'] as int,
+                label: item['label'] as String,
+                icon: item['icon'] as String,
+              );
+            },
             borderRadius: BorderRadius.circular(18.r),
             child: Container(
               padding: EdgeInsets.symmetric(horizontal: 12.w),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(18.r),
-                border: Border.all(color: AppTheme.softLight),
+                border: Border.all(color: context.colors.softLight),
               ),
               child: Row(
                 children: [
@@ -450,7 +454,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       gradient: LinearGradient(
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
-                        colors: [AppTheme.seafoamLight, AppTheme.softLight],
+                        colors: [context.colors.seafoamLight, context.colors.softLight],
                       ),
                       borderRadius: BorderRadius.circular(10.r),
                     ),
@@ -471,14 +475,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         style: TextStyle(
                           fontWeight: FontWeight.w700,
                           fontSize: 12.sp,
-                          color: AppTheme.primaryDark,
+                          color: context.colors.primaryDark,
                         ),
                       ),
                       Text(
                         item['ml'] as String,
                         style: TextStyle(
                           fontSize: 10.sp,
-                          color: AppTheme.mutedLight,
+                          color: context.colors.mutedLight,
                         ),
                       ),
                     ],
@@ -494,7 +498,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Widget _buildCustomLogToggle(HydrationProvider provider) {
     return GestureDetector(
-      onTap: () => _showCustomLogPopup(provider),
+      onTap: () {
+        HapticFeedback.lightImpact();
+        _showCustomLogPopup(provider);
+      },
       child: Container(
         width: double.infinity,
         padding: EdgeInsets.symmetric(vertical: 13.h),
@@ -502,7 +509,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           color: Colors.transparent,
           borderRadius: BorderRadius.circular(18.r),
           border: Border.all(
-            color: AppTheme.primary.withValues(alpha: 0.33),
+            color: context.colors.primary.withValues(alpha: 0.33),
             width: 1.5.w,
             strokeAlign: BorderSide.strokeAlignCenter,
           ),
@@ -510,14 +517,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.add, size: 16, color: AppTheme.primary),
+            Icon(Icons.add, size: 16, color: context.colors.primary),
             SizedBox(width: 8.w),
             Text(
               'Custom Log',
               style: TextStyle(
                 fontSize: 14.sp,
                 fontWeight: FontWeight.w600,
-                color: AppTheme.primary,
+                color: context.colors.primary,
               ),
             ),
           ],
@@ -531,12 +538,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return Container(
       padding: EdgeInsets.all(16.w),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.colors.card,
         borderRadius: BorderRadius.circular(22.r),
-        border: Border.all(color: AppTheme.softLight),
+        border: Border.all(color: context.colors.softLight),
         boxShadow: [
           BoxShadow(
-            color: AppTheme.primary.withValues(alpha: 0.06),
+            color: context.colors.primary.withValues(alpha: 0.06),
             blurRadius: 16,
             offset: Offset(0, 2),
           ),
@@ -552,13 +559,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 style: TextStyle(
                   fontSize: 14.sp,
                   fontWeight: FontWeight.w700,
-                  color: AppTheme.primaryDark,
+                  color: context.colors.primaryDark,
                 ),
               ),
               Container(
                 padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
                 decoration: BoxDecoration(
-                  color: AppTheme.primary.withValues(alpha: 0.07),
+                  color: context.colors.primary.withValues(alpha: 0.07),
                   borderRadius: BorderRadius.circular(8.r),
                 ),
                 child: Text(
@@ -566,7 +573,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   style: TextStyle(
                     fontSize: 11.sp,
                     fontWeight: FontWeight.w700,
-                    color: AppTheme.primary,
+                    color: context.colors.primary,
                   ),
                 ),
               ),
@@ -578,7 +585,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               padding: EdgeInsets.symmetric(vertical: 20.h),
               child: Text(
                 'No logs yet — start drinking! 💧',
-                style: TextStyle(fontSize: 13.sp, color: AppTheme.mutedLight),
+                style: TextStyle(fontSize: 13.sp, color: context.colors.mutedLight),
               ),
             )
           else
@@ -590,6 +597,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 key: ValueKey('${log.time}_${log.label}_$idx'),
                 direction: DismissDirection.endToStart,
                 onDismissed: (_) {
+                  HapticFeedback.lightImpact();
                   provider.undoDrink(idx);
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
@@ -598,7 +606,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         style: TextStyle(fontFamily: 'DM Sans'),
                       ),
                       behavior: SnackBarBehavior.floating,
-                      backgroundColor: AppTheme.primaryDark,
+                      backgroundColor: context.colors.primaryDark,
                       duration: const Duration(seconds: 2),
                     ),
                   );
@@ -608,7 +616,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   padding: EdgeInsets.only(right: 20.w),
                   margin: EdgeInsets.symmetric(vertical: 5.h),
                   decoration: BoxDecoration(
-                    color: AppTheme.danger,
+                    color: context.colors.danger,
                     borderRadius: BorderRadius.circular(12.r),
                   ),
                   child: const Icon(Icons.delete_outline, color: Colors.white),
@@ -620,7 +628,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         ? null
                         : Border(
                             bottom: BorderSide(
-                              color: AppTheme.softLight,
+                              color: context.colors.softLight,
                               width: 1.w,
                             ),
                           ),
@@ -634,7 +642,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           gradient: LinearGradient(
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
-                            colors: [AppTheme.seafoamLight, AppTheme.softLight],
+                            colors: [context.colors.seafoamLight, context.colors.softLight],
                           ),
                           borderRadius: BorderRadius.circular(13.r),
                         ),
@@ -655,7 +663,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               style: TextStyle(
                                 fontWeight: FontWeight.w600,
                                 fontSize: 13.sp,
-                                color: AppTheme.text,
+                                color: context.colors.text,
                               ),
                               overflow: TextOverflow.ellipsis,
                             ),
@@ -664,7 +672,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               log.time,
                               style: TextStyle(
                                 fontSize: 11.sp,
-                                color: AppTheme.mutedLight,
+                                color: context.colors.mutedLight,
                               ),
                             ),
                           ],
@@ -676,7 +684,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           vertical: 4.h,
                         ),
                         decoration: BoxDecoration(
-                          color: AppTheme.primary.withValues(alpha: 0.07),
+                          color: context.colors.primary.withValues(alpha: 0.07),
                           borderRadius: BorderRadius.circular(10.r),
                         ),
                         child: Text(
@@ -684,7 +692,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           style: TextStyle(
                             fontWeight: FontWeight.w700,
                             fontSize: 12.sp,
-                            color: AppTheme.primary,
+                            color: context.colors.primary,
                           ),
                         ),
                       ),
@@ -693,6 +701,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         color: Colors.transparent,
                         child: InkWell(
                           onTap: () {
+                            HapticFeedback.lightImpact();
                             provider.undoDrink(idx);
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
@@ -701,7 +710,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   style: TextStyle(fontFamily: 'DM Sans'),
                                 ),
                                 behavior: SnackBarBehavior.floating,
-                                backgroundColor: AppTheme.primaryDark,
+                                backgroundColor: context.colors.primaryDark,
                                 duration: const Duration(seconds: 2),
                               ),
                             );
@@ -711,7 +720,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             padding: EdgeInsets.all(4.r),
                             child: Icon(
                               Icons.delete_outline,
-                              color: AppTheme.danger.withValues(alpha: 0.7),
+                              color: context.colors.danger.withValues(alpha: 0.7),
                               size: 18.sp,
                             ),
                           ),
@@ -758,6 +767,7 @@ class _CustomLogBottomSheetState extends State<_CustomLogBottomSheet> {
     final label = _labelController.text.isNotEmpty
         ? _labelController.text
         : 'Custom drink';
+    HapticFeedback.lightImpact();
     widget.provider.drinkWater(amount, label: label, icon: selectedIcon);
     Navigator.pop(context);
   }
@@ -772,7 +782,7 @@ class _CustomLogBottomSheetState extends State<_CustomLogBottomSheet> {
         MediaQuery.of(context).viewInsets.bottom + 30.h,
       ),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.colors.card,
         borderRadius: BorderRadius.vertical(top: Radius.circular(32.r)),
       ),
       child: Column(
@@ -784,7 +794,7 @@ class _CustomLogBottomSheetState extends State<_CustomLogBottomSheet> {
               width: 40.w,
               height: 4.h,
               decoration: BoxDecoration(
-                color: AppTheme.softLight,
+                color: context.colors.softLight,
                 borderRadius: BorderRadius.circular(10.r),
               ),
             ),
@@ -795,7 +805,7 @@ class _CustomLogBottomSheetState extends State<_CustomLogBottomSheet> {
             style: TextStyle(
               fontSize: 18.sp,
               fontWeight: FontWeight.w800,
-              color: AppTheme.primaryDark,
+              color: context.colors.primaryDark,
             ),
           ),
           SizedBox(height: 20.h),
@@ -804,7 +814,7 @@ class _CustomLogBottomSheetState extends State<_CustomLogBottomSheet> {
             style: TextStyle(
               fontSize: 10.sp,
               fontWeight: FontWeight.w700,
-              color: AppTheme.mutedLight,
+              color: context.colors.mutedLight,
               letterSpacing: 1.2,
             ),
           ),
@@ -826,17 +836,17 @@ class _CustomLogBottomSheetState extends State<_CustomLogBottomSheet> {
                       });
                     },
                     backgroundColor: isSelected
-                        ? AppTheme.primary.withValues(alpha: 0.1)
-                        : Colors.white,
+                        ? context.colors.primary.withValues(alpha: 0.1)
+                        : context.colors.card,
                     side: BorderSide(
-                      color: isSelected ? AppTheme.primary : AppTheme.softLight,
+                      color: isSelected ? context.colors.primary : context.colors.softLight,
                     ),
                     labelStyle: TextStyle(
                       fontSize: 12.sp,
                       fontWeight: isSelected
                           ? FontWeight.w700
                           : FontWeight.w500,
-                      color: isSelected ? AppTheme.primary : AppTheme.text,
+                      color: isSelected ? context.colors.primary : context.colors.text,
                     ),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12.r),
@@ -853,16 +863,16 @@ class _CustomLogBottomSheetState extends State<_CustomLogBottomSheet> {
               labelText: 'Drink Name',
               hintText: 'e.g. Protein Shake',
               labelStyle: TextStyle(
-                color: AppTheme.mutedLight,
+                color: context.colors.mutedLight,
                 fontSize: 13.sp,
               ),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(16.r),
-                borderSide: BorderSide(color: AppTheme.softLight),
+                borderSide: BorderSide(color: context.colors.softLight),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(16.r),
-                borderSide: BorderSide(color: AppTheme.softLight),
+                borderSide: BorderSide(color: context.colors.softLight),
               ),
             ),
           ),
@@ -874,16 +884,16 @@ class _CustomLogBottomSheetState extends State<_CustomLogBottomSheet> {
               labelText: 'Amount (ml)',
               hintText: 'e.g. 300',
               labelStyle: TextStyle(
-                color: AppTheme.mutedLight,
+                color: context.colors.mutedLight,
                 fontSize: 13.sp,
               ),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(16.r),
-                borderSide: BorderSide(color: AppTheme.softLight),
+                borderSide: BorderSide(color: context.colors.softLight),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(16.r),
-                borderSide: BorderSide(color: AppTheme.softLight),
+                borderSide: BorderSide(color: context.colors.softLight),
               ),
             ),
           ),
@@ -894,7 +904,7 @@ class _CustomLogBottomSheetState extends State<_CustomLogBottomSheet> {
             child: ElevatedButton(
               onPressed: _submit,
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.primary,
+                backgroundColor: context.colors.primary,
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16.r),

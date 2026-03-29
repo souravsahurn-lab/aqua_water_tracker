@@ -33,6 +33,7 @@ class _WaterBottleState extends State<WaterBottle>
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     final w = widget.size * 0.55;
     final h = widget.size;
     final fillPct = widget.pct.clamp(0, 100).toDouble();
@@ -47,6 +48,11 @@ class _WaterBottleState extends State<WaterBottle>
             painter: _WaterBottlePainter(
               fillPct: fillPct,
               wavePhase: _waveController.value,
+              accentColor: c.accent,
+              primaryColor: c.primary,
+              tealColor: c.teal,
+              seafoamColor: c.seafoam,
+              mutedLightColor: c.mutedLight,
             ),
             size: Size(w, h),
           );
@@ -59,8 +65,21 @@ class _WaterBottleState extends State<WaterBottle>
 class _WaterBottlePainter extends CustomPainter {
   final double fillPct;
   final double wavePhase;
+  final Color accentColor;
+  final Color primaryColor;
+  final Color tealColor;
+  final Color seafoamColor;
+  final Color mutedLightColor;
 
-  _WaterBottlePainter({required this.fillPct, required this.wavePhase});
+  _WaterBottlePainter({
+    required this.fillPct,
+    required this.wavePhase,
+    required this.accentColor,
+    required this.primaryColor,
+    required this.tealColor,
+    required this.seafoamColor,
+    required this.mutedLightColor,
+  });
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -76,7 +95,7 @@ class _WaterBottlePainter extends CustomPainter {
     final capGradient = LinearGradient(
       begin: Alignment.topCenter,
       end: Alignment.bottomCenter,
-      colors: [AppTheme.accent, AppTheme.primary],
+      colors: [accentColor, primaryColor],
     );
     final capRect = RRect.fromRectAndRadius(
       Rect.fromLTWH(31 * sx, 9 * sy, 26 * sx, 13 * sy),
@@ -96,7 +115,7 @@ class _WaterBottlePainter extends CustomPainter {
         Radius.circular(3 * sx),
       ),
       Paint()
-        ..color = AppTheme.teal
+        ..color = tealColor
         ..style = PaintingStyle.fill,
     );
 
@@ -124,7 +143,7 @@ class _WaterBottlePainter extends CustomPainter {
     canvas.drawPath(
       bodyPath,
       Paint()
-        ..color = AppTheme.seafoam
+        ..color = seafoamColor
         ..style = PaintingStyle.stroke
         ..strokeWidth = 1.5,
     );
@@ -141,7 +160,7 @@ class _WaterBottlePainter extends CustomPainter {
     final waterGradient = LinearGradient(
       begin: Alignment.topCenter,
       end: Alignment.bottomCenter,
-      colors: [AppTheme.seafoam.withValues(alpha: 0.95), AppTheme.primary],
+      colors: [seafoamColor.withValues(alpha: 0.95), primaryColor],
     );
     final waterRect = Rect.fromLTWH(9 * sx, fillY + bob, 70 * sx, h);
     canvas.drawRect(
@@ -197,7 +216,7 @@ class _WaterBottlePainter extends CustomPainter {
     canvas.drawPath(
       bodyPath,
       Paint()
-        ..color = AppTheme.primary.withValues(alpha: 0.25)
+        ..color = primaryColor.withValues(alpha: 0.25)
         ..style = PaintingStyle.stroke
         ..strokeWidth = 1.5,
     );
@@ -226,7 +245,7 @@ class _WaterBottlePainter extends CustomPainter {
         Offset(74 * sx, markY),
         Offset(80 * sx, markY),
         Paint()
-          ..color = AppTheme.seafoam.withValues(alpha: 0.9)
+          ..color = seafoamColor.withValues(alpha: 0.9)
           ..strokeWidth = 1.2,
       );
 
@@ -235,7 +254,7 @@ class _WaterBottlePainter extends CustomPainter {
           text: '$m%',
           style: TextStyle(
             fontSize: 6 * sx,
-            color: AppTheme.mutedLight,
+            color: mutedLightColor,
           ),
         ),
         textDirection: TextDirection.ltr,

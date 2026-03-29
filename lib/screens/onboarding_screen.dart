@@ -14,11 +14,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   final PageController _controller = PageController();
   int _currentPage = 0;
 
-  final _pages = [
+  List<_OnboardPage> _buildPages(AppColors c) => [
     _OnboardPage(
       icon: Icons.water_drop,
-      iconColor: AppTheme.primary,
-      bgColor: AppTheme.seafoam,
+      iconColor: c.primary,
+      bgColor: c.seafoam,
       title: 'Stay Hydrated,\nStay Healthy',
       body:
           'Your body is 60% water. Smart reminders help you maintain optimal hydration every day.',
@@ -26,8 +26,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     ),
     _OnboardPage(
       icon: Icons.notifications_active_rounded,
-      iconColor: AppTheme.accent,
-      bgColor: AppTheme.accent,
+      iconColor: c.accent,
+      bgColor: c.accent,
       title: 'Smart Reminders\nJust for You',
       body:
           'Personalized reminders based on your schedule, activity level, and hydration goals.',
@@ -35,8 +35,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     ),
     _OnboardPage(
       icon: Icons.bar_chart_rounded,
-      iconColor: AppTheme.warning,
-      bgColor: AppTheme.warning,
+      iconColor: c.warning,
+      bgColor: c.warning,
       title: 'Track Your\nProgress Daily',
       body:
           'Beautiful analytics show your hydration streaks, patterns, and health improvements over time.',
@@ -45,7 +45,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   ];
 
   void _nextPage() {
-    if (_currentPage < _pages.length - 1) {
+    if (_currentPage < 2) {
       _controller.nextPage(
         duration: Duration(milliseconds: 400),
         curve: Curves.easeInOut,
@@ -64,18 +64,20 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
+    final pages = _buildPages(c);
     return Scaffold(
-      backgroundColor: AppTheme.bg,
+      backgroundColor: c.bg,
       body: SafeArea(
         child: Column(
           children: [
             Expanded(
               child: PageView.builder(
                 controller: _controller,
-                itemCount: _pages.length,
+                itemCount: pages.length,
                 onPageChanged: (p) => setState(() => _currentPage = p),
                 itemBuilder: (context, index) {
-                  final page = _pages[index];
+                  final page = pages[index];
                   return Padding(
                     padding: EdgeInsets.symmetric(horizontal: 28.w),
                     child: Column(
@@ -93,8 +95,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                                   shape: BoxShape.circle,
                                   gradient: RadialGradient(
                                     colors: [
-                                      AppTheme.seafoamLight,
-                                      AppTheme.bg,
+                                      c.seafoamLight,
+                                      c.bg,
                                     ],
                                   ),
                                 ),
@@ -109,7 +111,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                                     gradient: RadialGradient(
                                       colors: [
                                         page.bgColor.withValues(alpha: 0.33),
-                                        AppTheme.primaryLight
+                                        c.primaryLight
                                             .withValues(alpha: 0.13),
                                       ],
                                     ),
@@ -132,7 +134,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                           style: TextStyle(
                             fontSize: 28.sp,
                             fontWeight: FontWeight.w800,
-                            color: AppTheme.primaryDark,
+                            color: c.primaryDark,
                             height: 1.2.h,
                           ),
                         ),
@@ -143,7 +145,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             fontSize: 14.sp,
-                            color: AppTheme.mutedLight,
+                            color: c.mutedLight,
                             height: 1.7.h,
                           ),
                         ),
@@ -165,7 +167,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   margin: EdgeInsets.symmetric(horizontal: 4.w),
                   decoration: BoxDecoration(
                     color:
-                        i == _currentPage ? AppTheme.primary : AppTheme.soft,
+                        i == _currentPage ? c.primary : c.soft,
                     borderRadius: BorderRadius.circular(4.r),
                   ),
                 );

@@ -62,7 +62,7 @@ class _SplashScreenState extends State<SplashScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
-        decoration: BoxDecoration(gradient: AppTheme.splashGradient),
+        decoration: BoxDecoration(gradient: context.colors.splashGradient),
         child: Stack(
           children: [
             // Ripple circles

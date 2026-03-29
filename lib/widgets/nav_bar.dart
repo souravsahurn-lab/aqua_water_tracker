@@ -2,6 +2,7 @@ import 'dart:ui';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
+import 'package:flutter/services.dart';
 
 class AppNavBar extends StatelessWidget {
   final String current;
@@ -23,7 +24,7 @@ class AppNavBar extends StatelessWidget {
         borderRadius: BorderRadius.circular(32.r),
         boxShadow: [
           BoxShadow(
-            color: AppTheme.primary.withValues(alpha: 0.15),
+            color: context.colors.primary.withValues(alpha: 0.15),
             blurRadius: 20,
             offset: const Offset(0, 8),
           ),
@@ -41,10 +42,10 @@ class AppNavBar extends StatelessWidget {
           child: Container(
             padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.85),
+              color: context.colors.card.withValues(alpha: 0.85),
               borderRadius: BorderRadius.circular(32.r),
               border: Border.all(
-                color: Colors.white.withValues(alpha: 0.4),
+                color: context.colors.softLight.withValues(alpha: 0.4),
                 width: 1.5,
               ),
             ),
@@ -54,23 +55,26 @@ class AppNavBar extends StatelessWidget {
               children: items.map((item) {
                 final active = current == item.id;
                 return GestureDetector(
-                  onTap: () => onChange(item.id),
+                  onTap: () {
+                    HapticFeedback.lightImpact();
+                    onChange(item.id);
+                  },
                   behavior: HitTestBehavior.opaque,
                   child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 300),
+                    duration: const Duration(milliseconds: 200),
                     curve: Curves.easeOutQuint,
                     padding: EdgeInsets.symmetric(
                       horizontal: active ? 20.w : 14.w,
                       vertical: 12.h,
                     ),
                     decoration: BoxDecoration(
-                      color: active ? AppTheme.primary : Colors.transparent,
-                      gradient: active ? AppTheme.primaryGradient : null,
+                      color: active ? context.colors.primary : Colors.transparent,
+                      gradient: active ? context.colors.primaryGradient : null,
                       borderRadius: BorderRadius.circular(24.r),
                       boxShadow: active
                           ? [
                               BoxShadow(
-                                color: AppTheme.primary.withValues(alpha: 0.3),
+                                color: context.colors.primary.withValues(alpha: 0.3),
                                 blurRadius: 12,
                                 offset: const Offset(0, 4),
                               )
@@ -83,7 +87,7 @@ class AppNavBar extends StatelessWidget {
                         Icon(
                           item.icon,
                           size: 24.sp,
-                          color: active ? Colors.white : AppTheme.mutedLight,
+                          color: active ? Colors.white : context.colors.mutedLight,
                         ),
                         if (active) ...[
                           SizedBox(width: 8.w),
