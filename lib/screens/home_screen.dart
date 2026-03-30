@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 import '../providers/hydration_provider.dart';
 import '../widgets/nav_bar.dart';
@@ -17,32 +16,16 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  bool _isVisible = true;
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: context.colors.bg,
       body: Consumer<HydrationProvider>(
         builder: (context, provider, _) {
-          return NotificationListener<ScrollNotification>(
-            onNotification: (ScrollNotification notification) {
-              if (notification is ScrollUpdateNotification) {
-                // If the user is scrolling down, hide the nav bar
-                if (notification.scrollDelta! > 2 && _isVisible) {
-                  setState(() => _isVisible = false);
-                }
-                // If the user is scrolling up, show the nav bar
-                else if (notification.scrollDelta! < -2 && !_isVisible) {
-                  setState(() => _isVisible = true);
-                }
-              }
-              return false;
-            },
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                // Screen content with smooth transition
+          return Stack(
+            fit: StackFit.expand,
+            children: [
+              // Screen content with smooth transition
                 AnimatedSwitcher(
                   duration: const Duration(milliseconds: 200),
                   switchInCurve: Curves.easeOutCubic,
@@ -59,33 +42,33 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     );
                   },
-                  child: Container(
+                  layoutBuilder: (Widget? currentChild, List<Widget> previousChildren) {
+                    return Stack(
+                      alignment: Alignment.topCenter,
+                      children: <Widget>[
+                        ...previousChildren,
+                        if (currentChild != null) currentChild,
+                      ],
+                    );
+                  },
+                  child: SizedBox.expand(
                     key: ValueKey<String>(provider.activeNav),
                     child: _buildScreen(provider.activeNav),
                   ),
                 ),
 
-                // Floating nav bar with auto-hide animation
-                AnimatedPositioned(
-                  duration: const Duration(milliseconds: 300),
-                  curve: Curves.easeOutQuint,
-                  left: 20.w,
-                  right: 20.w,
-                  bottom: _isVisible 
-                      ? (16.h + MediaQuery.of(context).padding.bottom) 
-                      : -140.h,
-                  child: AnimatedOpacity(
-                    duration: const Duration(milliseconds: 200),
-                    opacity: _isVisible ? 1.0 : 0.0,
-                    child: AppNavBar(
-                      current: provider.activeNav,
-                      onChange: (nav) => provider.setActiveNav(nav),
-                    ),
+                // Constant modern full-width nav bar
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  child: AppNavBar(
+                    current: provider.activeNav,
+                    onChange: (nav) => provider.setActiveNav(nav),
                   ),
                 ),
               ],
-            ),
-          );
+            );
         },
       ),
     );

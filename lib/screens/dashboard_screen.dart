@@ -1,11 +1,10 @@
-import 'dart:ui';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
 import '../providers/hydration_provider.dart';
 import '../widgets/water_bottle.dart';
-import '../widgets/wave_decoration.dart';
+import '../widgets/top_snackbar.dart';
 import 'package:flutter/services.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -25,6 +24,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
+  void _showLogsSheet(HydrationProvider provider) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => _LogsBottomSheet(provider: provider),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Consumer<HydrationProvider>(
@@ -32,22 +40,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
         final pct = provider.pct;
         final remaining = provider.remaining;
         final userData = provider.userData;
+        final logs = provider.logs;
 
-        return SingleChildScrollView(
-          child: Column(
-            children: [
-              // ─── Header ────────────────────────────────────────────
-              Padding(
-                padding: EdgeInsets.fromLTRB(
-                  20.w,
-                  16.h + MediaQuery.of(context).padding.top,
-                  20.w,
-                  0,
-                ),
-                child: Column(
-                  children: [
-                    // Greeting row
-                    Row(
+        return Stack(
+          children: [
+            // ─── Main scrollable content ──────────────────────────
+            Padding(
+              padding: EdgeInsets.only(
+                top: MediaQuery.of(context).padding.top,
+              ),
+              child: Column(
+                children: [
+                  // ─── Header ──────────────────────────────────────
+                  Padding(
+                    padding: EdgeInsets.fromLTRB(20.w, 8.h, 20.w, 0),
+                    child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
@@ -62,9 +69,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               ),
                             ),
                             Text(
-                              userData.name.isNotEmpty
-                                  ? userData.name
-                                  : 'Friend',
+                              userData.name.isNotEmpty ? userData.name : 'Friend',
                               style: TextStyle(
                                 fontSize: 24.sp,
                                 fontWeight: FontWeight.w800,
@@ -86,17 +91,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 borderRadius: BorderRadius.circular(20.r),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: context.colors.warning.withValues(
-                                      alpha: 0.08,
-                                    ),
+                                    color: context.colors.warning.withValues(alpha: 0.08),
                                     blurRadius: 10,
                                     offset: const Offset(0, 2),
                                   ),
                                 ],
                                 border: Border.all(
-                                  color: context.colors.warning.withValues(
-                                    alpha: 0.15,
-                                  ),
+                                  color: context.colors.warning.withValues(alpha: 0.15),
                                   width: 1.w,
                                 ),
                               ),
@@ -124,9 +125,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 shape: BoxShape.circle,
                                 boxShadow: [
                                   BoxShadow(
-                                    color: context.colors.primary.withValues(
-                                      alpha: 0.08,
-                                    ),
+                                    color: context.colors.primary.withValues(alpha: 0.08),
                                     blurRadius: 16,
                                     offset: const Offset(0, 4),
                                   ),
@@ -146,420 +145,243 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         ),
                       ],
                     ),
-                    SizedBox(height: 24.h),
+                  ),
 
-                    // Professional Bottle Card
-                    Container(
-                      width: double.infinity,
-                      decoration: BoxDecoration(
-                        gradient: context.colors.headerGradient,
-                        borderRadius: BorderRadius.circular(32.r),
-                        boxShadow: [
-                          BoxShadow(
-                            color: context.colors.primary.withValues(alpha: 0.22),
-                            blurRadius: 24,
-                            offset: const Offset(0, 10),
-                          ),
-                        ],
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(32.r),
-                        child: BackdropFilter(
-                          filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-                          child: Container(
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                begin: context.colors.headerGradient.begin,
-                                end: context.colors.headerGradient.end,
-                                stops: context.colors.headerGradient.stops,
-                                colors: context.colors.headerGradient.colors
-                                    .map((c) => c.withValues(alpha: 0.92))
-                                    .toList(),
-                              ),
-                            ),
-                            child: Stack(
-                              children: [
-                                // Soft decorative elements
-                                Positioned(
-                                  top: -30.h,
-                                  right: -20.w,
-                                  child: Container(
-                                    width: 140.w,
-                                    height: 140.h,
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      color: Colors.white.withValues(
-                                        alpha: 0.06,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                Positioned(
-                                  bottom: -40.h,
-                                  left: -30.w,
-                                  child: Container(
-                                    width: 160.w,
-                                    height: 160.h,
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      color: Colors.white.withValues(
-                                        alpha: 0.04,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                // Wave decoration inside the card at the bottom
-                                Positioned(
-                                  bottom: 0,
-                                  left: 0,
-                                  right: 0,
-                                  child: WaveDecoration(
-                                    color: Colors.white.withValues(alpha: 0.08),
-                                    opacity: 1.0,
-                                    height: 60.h,
-                                  ),
-                                ),
+                  // ─── Hero Bottle Section (fills available space) ─
+                  Expanded(
+                    child: _buildBottleHero(provider, pct, remaining, userData),
+                  ),
 
-                                Padding(
-                                  padding: EdgeInsets.symmetric(
-                                    horizontal: 24.w,
-                                    vertical: 28.h,
-                                  ),
-                                  child: Row(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.center,
-                                    children: [
-                                      WaterBottle(
-                                        pct: pct.toDouble(),
-                                        size: 140.h,
-                                      ),
-                                      SizedBox(width: 24.w),
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.center,
-                                          children: [
-                                            Text(
-                                              "Today's intake",
-                                              style: TextStyle(
-                                                fontSize: 12.sp,
-                                                fontWeight: FontWeight.w600,
-                                                color: Colors.white.withValues(
-                                                  alpha: 0.8,
-                                                ),
-                                              ),
-                                            ),
-                                            SizedBox(height: 4.h),
-                                            Row(
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.baseline,
-                                              textBaseline:
-                                                  TextBaseline.alphabetic,
-                                              children: [
-                                                Text(
-                                                  '${userData.drunk}',
-                                                  style: TextStyle(
-                                                    fontSize: 38.sp,
-                                                    fontWeight: FontWeight.w800,
-                                                    color: Colors.white,
-                                                    letterSpacing: -1,
-                                                    height: 1,
-                                                  ),
-                                                ),
-                                                SizedBox(width: 4.w),
-                                                Text(
-                                                  '/ ${userData.goal} ml',
-                                                  style: TextStyle(
-                                                    fontSize: 14.sp,
-                                                    fontWeight: FontWeight.w600,
-                                                    color: Colors.white
-                                                        .withValues(alpha: 0.7),
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                            SizedBox(height: 16.h),
-                                            Row(
-                                              mainAxisAlignment:
-                                                  MainAxisAlignment
-                                                      .spaceBetween,
-                                              children: [
-                                                Text(
-                                                  '$pct% complete',
-                                                  style: TextStyle(
-                                                    fontSize: 12.sp,
-                                                    fontWeight: FontWeight.w600,
-                                                    color: Colors.white
-                                                        .withValues(alpha: 0.9),
-                                                  ),
-                                                ),
-                                                if (remaining <= 0)
-                                                  Text(
-                                                    'Done! 🎉',
-                                                    style: TextStyle(
-                                                      fontSize: 12.sp,
-                                                      fontWeight:
-                                                          FontWeight.w700,
-                                                      color: const Color(
-                                                        0xFFFFDC96,
-                                                      ),
-                                                    ),
-                                                  ),
-                                              ],
-                                            ),
-                                            SizedBox(height: 8.h),
-                                            Container(
-                                              height: 6.h,
-                                              decoration: BoxDecoration(
-                                                color: Colors.black.withValues(
-                                                  alpha: 0.15,
-                                                ),
-                                                borderRadius:
-                                                    BorderRadius.circular(8.r),
-                                                border: Border.all(
-                                                  color: Colors.white
-                                                      .withValues(alpha: 0.1),
-                                                  width: 0.5.w,
-                                                ),
-                                              ),
-                                              child: FractionallySizedBox(
-                                                alignment: Alignment.centerLeft,
-                                                widthFactor: (pct / 100).clamp(
-                                                  0.0,
-                                                  1.0,
-                                                ),
-                                                child: Container(
-                                                  decoration: BoxDecoration(
-                                                    color: Colors.white,
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                          8.r,
-                                                        ),
-                                                    boxShadow: [
-                                                      BoxShadow(
-                                                        color: Colors.white
-                                                            .withValues(
-                                                              alpha: 0.5,
-                                                            ),
-                                                        blurRadius: 6,
-                                                      ),
-                                                    ],
-                                                  ),
-                                                ),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
+                  // ─── Today's Log Inline Card ─────────────────────
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 20.w),
+                    child: _buildLogCard(provider, logs),
+                  ),
+
+                  SizedBox(height: 10.h),
+
+                  // ─── Quick Actions + Custom Log ──────────────────
+                  Padding(
+                    padding: EdgeInsets.fromLTRB(20.w, 0, 20.w, 0),
+                    child: _buildQuickActions(provider),
+                  ),
+
+                  // Space for nav bar
+                  SizedBox(height: 100.h + MediaQuery.of(context).padding.bottom),
+                ],
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════════════
+  // Bottle Hero — centered bottle with values around it
+  // ═══════════════════════════════════════════════════════════════════
+  Widget _buildBottleHero(
+    HydrationProvider provider,
+    int pct,
+    int remaining,
+    dynamic userData,
+  ) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Subtitle
+          Text(
+            "Today's intake",
+            style: TextStyle(
+              fontSize: 12.sp,
+              fontWeight: FontWeight.w600,
+              color: context.colors.muted,
+              letterSpacing: 0.5,
+            ),
+          ),
+          SizedBox(height: 6.h),
+
+          // Big number
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: TextBaseline.alphabetic,
+            children: [
+              Text(
+                '${userData.drunk}',
+                style: TextStyle(
+                  fontSize: 44.sp,
+                  fontWeight: FontWeight.w800,
+                  color: context.colors.primaryDark,
+                  letterSpacing: -1.5,
+                  height: 1,
                 ),
               ),
-
-              // ─── Scrollable content ────────────────────────────────
-              Padding(
-                padding: EdgeInsets.fromLTRB(
-                  20.w,
-                  16.h,
-                  20.w,
-                  110.h + MediaQuery.of(context).padding.bottom,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Quick Add section
-                    Text(
-                      'QUICK ADD',
-                      style: TextStyle(
-                        fontSize: 11.sp,
-                        fontWeight: FontWeight.w700,
-                        color: context.colors.mutedLight,
-                        letterSpacing: 1.2,
-                        height: 1.0,
-                      ),
-                    ),
-                    SizedBox(height: 8.h),
-                    _buildQuickAddGrid(provider),
-                    SizedBox(height: 12.h),
-
-                    // Custom log button
-                    _buildCustomLogToggle(provider),
-                    SizedBox(height: 12.h),
-
-                    // Today's log
-                    _buildTodayLog(provider),
-                  ],
+              SizedBox(width: 4.w),
+              Text(
+                '/ ${userData.goal} ml',
+                style: TextStyle(
+                  fontSize: 15.sp,
+                  fontWeight: FontWeight.w600,
+                  color: context.colors.mutedLight,
                 ),
               ),
             ],
           ),
-        );
-      },
-    );
-  }
 
-  Widget _buildQuickAddGrid(HydrationProvider provider) {
-    final items = [
-      {'icon': '💧', 'label': 'Glass', 'ml': '250 ml', 'val': 250},
-      {'icon': '🥤', 'label': 'Bottle', 'ml': '500 ml', 'val': 500},
-      {'icon': '☕', 'label': 'Coffee', 'ml': '180 ml', 'val': 180},
-      {'icon': '🧃', 'label': 'Juice', 'ml': '330 ml', 'val': 330},
-    ];
+          SizedBox(height: 18.h),
 
-    return GridView.count(
-      crossAxisCount: 2,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      padding: EdgeInsets.zero,
-      mainAxisSpacing: 10.h,
-      crossAxisSpacing: 10.w,
-      childAspectRatio: 2.7,
-      children: items.map((item) {
-        return Material(
-          color: context.colors.card,
-          borderRadius: BorderRadius.circular(18.r),
-          elevation: 0,
-          child: InkWell(
-            onTap: () {
-              HapticFeedback.lightImpact();
-              provider.drinkWater(
-                item['val'] as int,
-                label: item['label'] as String,
-                icon: item['icon'] as String,
-              );
-            },
-            borderRadius: BorderRadius.circular(18.r),
-            child: Container(
-              padding: EdgeInsets.symmetric(horizontal: 12.w),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(18.r),
-                border: Border.all(color: context.colors.softLight),
+          // Bottle
+          WaterBottle(
+            pct: pct.toDouble(),
+            size: 180.h,
+          ),
+
+          SizedBox(height: 18.h),
+
+          // Progress pill
+          Container(
+            padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 8.h),
+            decoration: BoxDecoration(
+              color: context.colors.primary.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(20.r),
+              border: Border.all(
+                color: context.colors.primary.withValues(alpha: 0.15),
               ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 32.w,
-                    height: 32.h,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [context.colors.seafoamLight, context.colors.softLight],
-                      ),
-                      borderRadius: BorderRadius.circular(10.r),
-                    ),
-                    child: Center(
-                      child: Text(
-                        item['icon'] as String,
-                        style: TextStyle(fontSize: 14.sp),
-                      ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SizedBox(
+                  width: 100.w,
+                  height: 5.h,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(8.r),
+                    child: LinearProgressIndicator(
+                      value: (pct / 100).clamp(0.0, 1.0),
+                      backgroundColor: context.colors.softLight,
+                      valueColor: AlwaysStoppedAnimation(context.colors.primary),
                     ),
                   ),
-                  SizedBox(width: 8.w),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        item['label'] as String,
-                        style: TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 12.sp,
-                          color: context.colors.primaryDark,
-                        ),
-                      ),
-                      Text(
-                        item['ml'] as String,
-                        style: TextStyle(
-                          fontSize: 10.sp,
-                          color: context.colors.mutedLight,
-                        ),
-                      ),
-                    ],
+                ),
+                SizedBox(width: 10.w),
+                Text(
+                  remaining <= 0 ? 'Done! 🎉' : '$pct%',
+                  style: TextStyle(
+                    fontSize: 12.sp,
+                    fontWeight: FontWeight.w700,
+                    color: remaining <= 0
+                        ? context.colors.success
+                        : context.colors.primaryDark,
+                  ),
+                ),
+                if (remaining > 0) ...[
+                  Text(
+                    '  •  $remaining ml left',
+                    style: TextStyle(
+                      fontSize: 11.sp,
+                      fontWeight: FontWeight.w600,
+                      color: context.colors.mutedLight,
+                    ),
                   ),
                 ],
-              ),
+              ],
             ),
-          ),
-        );
-      }).toList(),
-    );
-  }
-
-  Widget _buildCustomLogToggle(HydrationProvider provider) {
-    return GestureDetector(
-      onTap: () {
-        HapticFeedback.lightImpact();
-        _showCustomLogPopup(provider);
-      },
-      child: Container(
-        width: double.infinity,
-        padding: EdgeInsets.symmetric(vertical: 13.h),
-        decoration: BoxDecoration(
-          color: Colors.transparent,
-          borderRadius: BorderRadius.circular(18.r),
-          border: Border.all(
-            color: context.colors.primary.withValues(alpha: 0.33),
-            width: 1.5.w,
-            strokeAlign: BorderSide.strokeAlignCenter,
-          ),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.add, size: 16, color: context.colors.primary),
-            SizedBox(width: 8.w),
-            Text(
-              'Custom Log',
-              style: TextStyle(
-                fontSize: 14.sp,
-                fontWeight: FontWeight.w600,
-                color: context.colors.primary,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTodayLog(HydrationProvider provider) {
-    final logs = provider.logs;
-    return Container(
-      padding: EdgeInsets.all(16.w),
-      decoration: BoxDecoration(
-        color: context.colors.card,
-        borderRadius: BorderRadius.circular(22.r),
-        border: Border.all(color: context.colors.softLight),
-        boxShadow: [
-          BoxShadow(
-            color: context.colors.primary.withValues(alpha: 0.06),
-            blurRadius: 16,
-            offset: Offset(0, 2),
           ),
         ],
       ),
-      child: Column(
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════════════
+  // Today's Log — small inline tappable card
+  // ═══════════════════════════════════════════════════════════════════
+  Widget _buildLogCard(HydrationProvider provider, List logs) {
+    return Material(
+      color: context.colors.card,
+      borderRadius: BorderRadius.circular(18.r),
+      child: InkWell(
+        onTap: () => _showLogsSheet(provider),
+        borderRadius: BorderRadius.circular(18.r),
+        child: Container(
+          padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(18.r),
+            border: Border.all(color: context.colors.softLight),
+          ),
+          child: Row(
             children: [
-              Text(
-                "Today's Log",
-                style: TextStyle(
-                  fontSize: 14.sp,
-                  fontWeight: FontWeight.w700,
-                  color: context.colors.primaryDark,
+              // Recent log icons (show last 3)
+              if (logs.isEmpty)
+                Container(
+                  width: 32.w,
+                  height: 32.h,
+                  decoration: BoxDecoration(
+                    color: context.colors.primary.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(10.r),
+                  ),
+                  child: Icon(
+                    Icons.water_drop_outlined,
+                    size: 18.sp,
+                    color: context.colors.primary,
+                  ),
+                )
+              else
+                SizedBox(
+                  width: (logs.length.clamp(1, 3) * 24.0 + 8).w,
+                  height: 32.h,
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      for (int i = 0; i < logs.length.clamp(0, 3); i++)
+                        Positioned(
+                          left: (i * 20.0).w,
+                          child: Container(
+                            width: 32.w,
+                            height: 32.h,
+                            decoration: BoxDecoration(
+                              color: context.colors.seafoamLight,
+                              borderRadius: BorderRadius.circular(10.r),
+                              border: Border.all(
+                                color: context.colors.card,
+                                width: 2,
+                              ),
+                            ),
+                            child: Center(
+                              child: Text(
+                                logs[i].icon,
+                                style: TextStyle(fontSize: 14.sp),
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              SizedBox(width: 12.w),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "Today's Log",
+                      style: TextStyle(
+                        fontSize: 13.sp,
+                        fontWeight: FontWeight.w700,
+                        color: context.colors.primaryDark,
+                      ),
+                    ),
+                    Text(
+                      logs.isEmpty
+                          ? 'No logs yet'
+                          : '${logs.length} entries • Tap to view',
+                      style: TextStyle(
+                        fontSize: 11.sp,
+                        color: context.colors.mutedLight,
+                      ),
+                    ),
+                  ],
                 ),
               ),
               Container(
@@ -569,7 +391,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   borderRadius: BorderRadius.circular(8.r),
                 ),
                 child: Text(
-                  '${logs.length} entries',
+                  '${logs.fold<int>(0, (sum, l) => sum + (l.ml as int))} ml',
                   style: TextStyle(
                     fontSize: 11.sp,
                     fontWeight: FontWeight.w700,
@@ -577,166 +399,349 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                 ),
               ),
+              SizedBox(width: 6.w),
+              Icon(
+                Icons.chevron_right_rounded,
+                color: context.colors.mutedLight,
+                size: 20.sp,
+              ),
             ],
           ),
-          SizedBox(height: 14.h),
-          if (logs.isEmpty)
-            Padding(
-              padding: EdgeInsets.symmetric(vertical: 20.h),
-              child: Text(
-                'No logs yet — start drinking! 💧',
-                style: TextStyle(fontSize: 13.sp, color: context.colors.mutedLight),
-              ),
-            )
-          else
-            ...logs.take(5).toList().asMap().entries.map((entry) {
+        ),
+      ),
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════════════
+  // Quick Actions — compact row above nav
+  // ═══════════════════════════════════════════════════════════════════
+  Widget _buildQuickActions(HydrationProvider provider) {
+    final items = [
+      {'icon': '☕', 'label': 'Cup', 'ml': '100', 'val': 100},
+      {'icon': '🥛', 'label': 'Glass', 'ml': '250', 'val': 250},
+      {'icon': '🫗', 'label': 'Mug', 'ml': '300', 'val': 300},
+      {'icon': '🍶', 'label': 'Bottle', 'ml': '500', 'val': 500},
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'QUICK ADD',
+          style: TextStyle(
+            fontSize: 10.sp,
+            fontWeight: FontWeight.w700,
+            color: context.colors.mutedLight,
+            letterSpacing: 1.2,
+          ),
+        ),
+        SizedBox(height: 8.h),
+        Row(
+          children: [
+            // Quick add chips
+            ...items.asMap().entries.map((entry) {
               final idx = entry.key;
-              final log = entry.value;
-              final isLast = idx == (logs.length.clamp(0, 5) - 1);
-              return Dismissible(
-                key: ValueKey('${log.time}_${log.label}_$idx'),
-                direction: DismissDirection.endToStart,
-                onDismissed: (_) {
-                  HapticFeedback.lightImpact();
-                  provider.undoDrink(idx);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        'Log removed',
-                        style: TextStyle(fontFamily: 'DM Sans'),
-                      ),
-                      behavior: SnackBarBehavior.floating,
-                      backgroundColor: context.colors.primaryDark,
-                      duration: const Duration(seconds: 2),
-                    ),
-                  );
-                },
-                background: Container(
-                  alignment: Alignment.centerRight,
-                  padding: EdgeInsets.only(right: 20.w),
-                  margin: EdgeInsets.symmetric(vertical: 5.h),
-                  decoration: BoxDecoration(
-                    color: context.colors.danger,
-                    borderRadius: BorderRadius.circular(12.r),
-                  ),
-                  child: const Icon(Icons.delete_outline, color: Colors.white),
-                ),
-                child: Container(
-                  padding: EdgeInsets.symmetric(vertical: 10.h),
-                  decoration: BoxDecoration(
-                    border: isLast
-                        ? null
-                        : Border(
-                            bottom: BorderSide(
-                              color: context.colors.softLight,
-                              width: 1.w,
-                            ),
-                          ),
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 38.w,
-                        height: 38.h,
+              final item = entry.value;
+              return Expanded(
+                child: Padding(
+                  padding: EdgeInsets.only(right: idx == items.length - 1 ? 6.w : 6.w),
+                  child: Material(
+                    color: context.colors.card,
+                    borderRadius: BorderRadius.circular(14.r),
+                    child: InkWell(
+                      onTap: () {
+                        HapticFeedback.lightImpact();
+                        provider.drinkWater(
+                          item['val'] as int,
+                          label: item['label'] as String,
+                          icon: item['icon'] as String,
+                        );
+                        TopSnackBar.show(
+                          context,
+                          message: '+${item['ml']} ml ${item['label']} added 💦',
+                          icon: item['icon'] as String,
+                          type: TopSnackBarType.success,
+                        );
+                      },
+                      borderRadius: BorderRadius.circular(14.r),
+                      child: Container(
+                        padding: EdgeInsets.symmetric(vertical: 10.h),
                         decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                            colors: [context.colors.seafoamLight, context.colors.softLight],
-                          ),
-                          borderRadius: BorderRadius.circular(13.r),
+                          border: Border.all(color: context.colors.softLight),
+                          borderRadius: BorderRadius.circular(14.r),
                         ),
-                        child: Center(
-                          child: Text(
-                            log.icon,
-                            style: TextStyle(fontSize: 17.sp),
-                          ),
-                        ),
-                      ),
-                      SizedBox(width: 12.w),
-                      Expanded(
                         child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
                           children: [
+                            Text(item['icon'] as String, style: TextStyle(fontSize: 18.sp)),
+                            SizedBox(height: 3.h),
                             Text(
-                              log.label,
+                              '${item['ml']} ml',
                               style: TextStyle(
-                                fontWeight: FontWeight.w600,
-                                fontSize: 13.sp,
-                                color: context.colors.text,
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            SizedBox(height: 1.h),
-                            Text(
-                              log.time,
-                              style: TextStyle(
-                                fontSize: 11.sp,
-                                color: context.colors.mutedLight,
+                                fontSize: 10.sp,
+                                fontWeight: FontWeight.w700,
+                                color: context.colors.primaryDark,
                               ),
                             ),
                           ],
                         ),
                       ),
-                      Container(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: 10.w,
-                          vertical: 4.h,
-                        ),
-                        decoration: BoxDecoration(
-                          color: context.colors.primary.withValues(alpha: 0.07),
-                          borderRadius: BorderRadius.circular(10.r),
-                        ),
-                        child: Text(
-                          '+${log.ml} ml',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w700,
-                            fontSize: 12.sp,
-                            color: context.colors.primary,
-                          ),
+                    ),
+                  ),
+                ),
+              );
+            }),
+            // Custom log button
+            SizedBox(
+              width: 48.w,
+              height: 48.h,
+              child: Material(
+                color: context.colors.primary,
+                borderRadius: BorderRadius.circular(14.r),
+                child: InkWell(
+                  onTap: () {
+                    HapticFeedback.lightImpact();
+                    _showCustomLogPopup(provider);
+                  },
+                  borderRadius: BorderRadius.circular(14.r),
+                  child: Icon(
+                    Icons.add_rounded,
+                    color: Colors.white,
+                    size: 24.sp,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+// ═════════════════════════════════════════════════════════════════════
+// Logs Bottom Sheet — shown when tapping "Today's Log" card
+// ═════════════════════════════════════════════════════════════════════
+class _LogsBottomSheet extends StatelessWidget {
+  final HydrationProvider provider;
+  const _LogsBottomSheet({required this.provider});
+
+  @override
+  Widget build(BuildContext context) {
+    return ChangeNotifierProvider.value(
+      value: provider,
+      child: Consumer<HydrationProvider>(
+        builder: (context, provider, _) {
+          final logs = provider.logs;
+          final maxHeight = MediaQuery.of(context).size.height * 0.65;
+
+          return Container(
+            constraints: BoxConstraints(maxHeight: maxHeight),
+            decoration: BoxDecoration(
+              color: context.colors.card,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(32.r)),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Handle
+                SizedBox(height: 12.h),
+                Center(
+                  child: Container(
+                    width: 40.w,
+                    height: 4.h,
+                    decoration: BoxDecoration(
+                      color: context.colors.softLight,
+                      borderRadius: BorderRadius.circular(10.r),
+                    ),
+                  ),
+                ),
+
+                // Header
+                Padding(
+                  padding: EdgeInsets.fromLTRB(24.w, 20.h, 24.w, 16.h),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        "Today's Log",
+                        style: TextStyle(
+                          fontSize: 18.sp,
+                          fontWeight: FontWeight.w800,
+                          color: context.colors.primaryDark,
                         ),
                       ),
-                      SizedBox(width: 8.w),
-                      Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          onTap: () {
-                            HapticFeedback.lightImpact();
-                            provider.undoDrink(idx);
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  'Log removed',
-                                  style: TextStyle(fontFamily: 'DM Sans'),
-                                ),
-                                behavior: SnackBarBehavior.floating,
-                                backgroundColor: context.colors.primaryDark,
-                                duration: const Duration(seconds: 2),
-                              ),
-                            );
-                          },
+                      Container(
+                        padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
+                        decoration: BoxDecoration(
+                          color: context.colors.primary.withValues(alpha: 0.07),
                           borderRadius: BorderRadius.circular(8.r),
-                          child: Padding(
-                            padding: EdgeInsets.all(4.r),
-                            child: Icon(
-                              Icons.delete_outline,
-                              color: context.colors.danger.withValues(alpha: 0.7),
-                              size: 18.sp,
-                            ),
+                        ),
+                        child: Text(
+                          '${logs.length} entries',
+                          style: TextStyle(
+                            fontSize: 11.sp,
+                            fontWeight: FontWeight.w700,
+                            color: context.colors.primary,
                           ),
                         ),
                       ),
                     ],
                   ),
                 ),
-              );
-            }),
-        ],
+
+                // Log list
+                if (logs.isEmpty)
+                  Padding(
+                    padding: EdgeInsets.symmetric(vertical: 40.h),
+                    child: Column(
+                      children: [
+                        Text('💧', style: TextStyle(fontSize: 36.sp)),
+                        SizedBox(height: 12.h),
+                        Text(
+                          'No logs yet — start drinking!',
+                          style: TextStyle(
+                            fontSize: 14.sp,
+                            color: context.colors.mutedLight,
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                else
+                  Flexible(
+                    child: ListView.builder(
+                      shrinkWrap: true,
+                      padding: EdgeInsets.fromLTRB(
+                        24.w,
+                        0,
+                        24.w,
+                        20.h + MediaQuery.of(context).padding.bottom,
+                      ),
+                      itemCount: logs.length,
+                      itemBuilder: (context, idx) {
+                        final log = logs[idx];
+                        return Container(
+                          margin: EdgeInsets.only(bottom: 8.h),
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 14.w,
+                            vertical: 12.h,
+                          ),
+                          decoration: BoxDecoration(
+                            color: context.colors.bg,
+                            borderRadius: BorderRadius.circular(14.r),
+                            border: Border.all(
+                              color: context.colors.softLight,
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 38.w,
+                                height: 38.h,
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                    colors: [
+                                      context.colors.seafoamLight,
+                                      context.colors.softLight,
+                                    ],
+                                  ),
+                                  borderRadius: BorderRadius.circular(12.r),
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    log.icon,
+                                    style: TextStyle(fontSize: 17.sp),
+                                  ),
+                                ),
+                              ),
+                              SizedBox(width: 12.w),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      log.label,
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 13.sp,
+                                        color: context.colors.text,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    SizedBox(height: 2.h),
+                                    Text(
+                                      log.time,
+                                      style: TextStyle(
+                                        fontSize: 11.sp,
+                                        color: context.colors.mutedLight,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Container(
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: 10.w,
+                                  vertical: 4.h,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: context.colors.primary.withValues(alpha: 0.07),
+                                  borderRadius: BorderRadius.circular(10.r),
+                                ),
+                                child: Text(
+                                  '+${log.ml} ml',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 12.sp,
+                                    color: context.colors.primary,
+                                  ),
+                                ),
+                              ),
+                              SizedBox(width: 6.w),
+                              Material(
+                                color: Colors.transparent,
+                                child: InkWell(
+                                  onTap: () {
+                                    HapticFeedback.lightImpact();
+                                    provider.undoDrink(idx);
+                                    TopSnackBar.show(
+                                      context,
+                                      message: 'Log removed',
+                                      type: TopSnackBarType.error,
+                                    );
+                                  },
+                                  borderRadius: BorderRadius.circular(8.r),
+                                  child: Padding(
+                                    padding: EdgeInsets.all(4.r),
+                                    child: Icon(
+                                      Icons.delete_outline_rounded,
+                                      color: context.colors.danger.withValues(alpha: 0.6),
+                                      size: 18.sp,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+              ],
+            ),
+          );
+        },
       ),
     );
   }
 }
 
+// ═════════════════════════════════════════════════════════════════════
+// Custom Log Bottom Sheet
+// ═════════════════════════════════════════════════════════════════════
 class _CustomLogBottomSheet extends StatefulWidget {
   final HydrationProvider provider;
   const _CustomLogBottomSheet({required this.provider});
@@ -770,6 +775,12 @@ class _CustomLogBottomSheetState extends State<_CustomLogBottomSheet> {
     HapticFeedback.lightImpact();
     widget.provider.drinkWater(amount, label: label, icon: selectedIcon);
     Navigator.pop(context);
+    TopSnackBar.show(
+      context,
+      message: '+$amount ml $label added 💦',
+      icon: selectedIcon,
+      type: TopSnackBarType.success,
+    );
   }
 
   @override
@@ -843,9 +854,7 @@ class _CustomLogBottomSheetState extends State<_CustomLogBottomSheet> {
                     ),
                     labelStyle: TextStyle(
                       fontSize: 12.sp,
-                      fontWeight: isSelected
-                          ? FontWeight.w700
-                          : FontWeight.w500,
+                      fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                       color: isSelected ? context.colors.primary : context.colors.text,
                     ),
                     shape: RoundedRectangleBorder(

@@ -19,93 +19,95 @@ class AppNavBar extends StatelessWidget {
       _NavItem(id: 'settings', icon: Icons.settings_rounded, label: 'Settings'),
     ];
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    final topRadius = BorderRadius.only(
+      topLeft: Radius.circular(28.r),
+      topRight: Radius.circular(28.r),
+    );
+
     return Container(
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(32.r),
+        borderRadius: topRadius,
         boxShadow: [
           BoxShadow(
-            color: context.colors.primary.withValues(alpha: 0.15),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-          ),
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            color: context.colors.primaryDark.withValues(alpha: isDark ? 0.2 : 0.08),
+            blurRadius: 24,
+            spreadRadius: 2,
+            offset: const Offset(0, -6),
           ),
         ],
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(32.r),
+        borderRadius: topRadius,
         child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+          filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
           child: Container(
-            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
             decoration: BoxDecoration(
-              color: context.colors.card.withValues(alpha: 0.85),
-              borderRadius: BorderRadius.circular(32.r),
+              color: context.colors.card.withValues(alpha: isDark ? 0.7 : 0.82),
+              borderRadius: topRadius,
               border: Border.all(
-                color: context.colors.softLight.withValues(alpha: 0.4),
-                width: 1.5,
+                color: context.colors.primaryLight.withValues(alpha: isDark ? 0.12 : 0.25),
+                width: 1,
               ),
             ),
-            child: Row(
-              mainAxisSize: MainAxisSize.max,
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: items.map((item) {
-                final active = current == item.id;
-                return GestureDetector(
-                  onTap: () {
-                    HapticFeedback.lightImpact();
-                    onChange(item.id);
-                  },
-                  behavior: HitTestBehavior.opaque,
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    curve: Curves.easeOutQuint,
-                    padding: EdgeInsets.symmetric(
-                      horizontal: active ? 20.w : 14.w,
-                      vertical: 12.h,
-                    ),
-                    decoration: BoxDecoration(
-                      color: active ? context.colors.primary : Colors.transparent,
-                      gradient: active ? context.colors.primaryGradient : null,
-                      borderRadius: BorderRadius.circular(24.r),
-                      boxShadow: active
-                          ? [
-                              BoxShadow(
-                                color: context.colors.primary.withValues(alpha: 0.3),
-                                blurRadius: 12,
-                                offset: const Offset(0, 4),
-                              )
-                            ]
-                          : null,
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          item.icon,
-                          size: 24.sp,
-                          color: active ? Colors.white : context.colors.mutedLight,
-                        ),
-                        if (active) ...[
-                          SizedBox(width: 8.w),
-                          Text(
-                            item.label,
-                            style: TextStyle(
-                              fontSize: 15.sp,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.white,
-                              letterSpacing: 0.3,
+            child: SafeArea(
+              top: false,
+              child: Container(
+                height: 68.h,
+                padding: EdgeInsets.symmetric(horizontal: 16.w),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: items.map((item) {
+                    final active = current == item.id;
+                    return GestureDetector(
+                      onTap: () {
+                        HapticFeedback.lightImpact();
+                        onChange(item.id);
+                      },
+                      behavior: HitTestBehavior.opaque,
+                      child: SizedBox(
+                        width: 68.w,
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            AnimatedScale(
+                              scale: active ? 1.08 : 0.95,
+                              duration: const Duration(milliseconds: 250),
+                              curve: Curves.easeOutBack,
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 250),
+                                padding: EdgeInsets.all(4.w),
+                                decoration: BoxDecoration(
+                                  color: active ? context.colors.primary.withValues(alpha: 0.15) : Colors.transparent,
+                                  borderRadius: BorderRadius.circular(12.r),
+                                ),
+                                child: Icon(
+                                  item.icon,
+                                  size: 26.sp,
+                                  color: active ? context.colors.primary : context.colors.mutedLight,
+                                ),
+                              ),
                             ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                );
-              }).toList(),
+                            SizedBox(height: 2.h),
+                            AnimatedDefaultTextStyle(
+                              duration: const Duration(milliseconds: 250),
+                              curve: Curves.easeOutQuint,
+                              style: TextStyle(
+                                fontSize: 10.sp,
+                                fontWeight: active ? FontWeight.w700 : FontWeight.w600,
+                                color: active ? context.colors.primary : context.colors.mutedLight,
+                                height: 1,
+                              ),
+                              child: Text(item.label),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ),
             ),
           ),
         ),

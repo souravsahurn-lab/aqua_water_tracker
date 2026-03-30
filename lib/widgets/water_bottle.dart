@@ -37,6 +37,7 @@ class _WaterBottleState extends State<WaterBottle>
     final w = widget.size * 0.55;
     final h = widget.size;
     final fillPct = widget.pct.clamp(0, 100).toDouble();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return SizedBox(
       width: w,
@@ -53,6 +54,7 @@ class _WaterBottleState extends State<WaterBottle>
               tealColor: c.teal,
               seafoamColor: c.seafoam,
               mutedLightColor: c.mutedLight,
+              isDark: isDark,
             ),
             size: Size(w, h),
           );
@@ -70,6 +72,7 @@ class _WaterBottlePainter extends CustomPainter {
   final Color tealColor;
   final Color seafoamColor;
   final Color mutedLightColor;
+  final bool isDark;
 
   _WaterBottlePainter({
     required this.fillPct,
@@ -79,6 +82,7 @@ class _WaterBottlePainter extends CustomPainter {
     required this.tealColor,
     required this.seafoamColor,
     required this.mutedLightColor,
+    required this.isDark,
   });
 
   @override
@@ -124,18 +128,18 @@ class _WaterBottlePainter extends CustomPainter {
       Offset(34 * sx, 12 * sy),
       Offset(54 * sx, 12 * sy),
       Paint()
-        ..color = Colors.white.withValues(alpha: 0.4)
+        ..color = isDark ? Colors.white.withValues(alpha: 0.15) : Colors.white.withValues(alpha: 0.4)
         ..strokeWidth = 1.5 * sx,
     );
 
     // ─── Bottle body ──────────────────────────────────────────────────
     final bodyPath = _bottlePath(sx, sy);
 
-    // White fill
+    // White/Glass fill
     canvas.drawPath(
       bodyPath,
       Paint()
-        ..color = Colors.white
+        ..color = isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white
         ..style = PaintingStyle.fill,
     );
 
@@ -192,7 +196,7 @@ class _WaterBottlePainter extends CustomPainter {
     canvas.drawPath(
       wavePath,
       Paint()
-        ..color = Colors.white.withValues(alpha: 0.12)
+        ..color = isDark ? Colors.white.withValues(alpha: 0.03) : Colors.white.withValues(alpha: 0.12)
         ..style = PaintingStyle.fill,
     );
 
@@ -203,7 +207,7 @@ class _WaterBottlePainter extends CustomPainter {
         end: Alignment.centerRight,
         colors: [
           Colors.white.withValues(alpha: 0),
-          Colors.white.withValues(alpha: 0.28),
+          isDark ? Colors.white.withValues(alpha: 0.08) : Colors.white.withValues(alpha: 0.28),
           Colors.white.withValues(alpha: 0),
         ],
         stops: [0, 0.4, 1],
@@ -232,7 +236,7 @@ class _WaterBottlePainter extends CustomPainter {
     canvas.drawPath(
       shinePath,
       Paint()
-        ..color = Colors.white.withValues(alpha: 0.45)
+        ..color = isDark ? Colors.white.withValues(alpha: 0.15) : Colors.white.withValues(alpha: 0.45)
         ..style = PaintingStyle.stroke
         ..strokeWidth = 3.5
         ..strokeCap = StrokeCap.round,
