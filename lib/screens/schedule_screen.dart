@@ -6,6 +6,7 @@ import '../providers/hydration_provider.dart';
 import '../services/notification_service.dart';
 import '../widgets/top_snackbar.dart';
 import 'package:flutter/services.dart';
+import 'aqua_reminder_screen.dart';
 
 class ScheduleScreen extends StatefulWidget {
   const ScheduleScreen({super.key});
@@ -106,231 +107,17 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                     ),
                     SizedBox(height: 16.h),
 
-                    // Smart Toggle Card
-                    _buildCard(context,
-                      child: Column(
-                        children: [
-                          Row(
-                            children: [
-                              Container(
-                                width: 40.w,
-                                height: 40.h,
-                                decoration: BoxDecoration(
-                                  color: context.colors.primary.withValues(alpha: 0.08),
-                                  borderRadius: BorderRadius.circular(12.r),
-                                ),
-                                child: Icon(
-                                  Icons.auto_awesome_rounded,
-                                  size: 20.sp,
-                                  color: context.colors.primary,
-                                ),
-                              ),
-                              SizedBox(width: 12.w),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Smart Reminders',
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.w700,
-                                        fontSize: 14.sp,
-                                        color: context.colors.primaryDark,
-                                      ),
-                                    ),
-                                    Text(
-                                      userData.smartReminders
-                                          ? 'Auto-adjusts based on your goal'
-                                          : 'Set your own interval',
-                                      style: TextStyle(
-                                        fontSize: 11.sp,
-                                        color: context.colors.mutedLight,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              _buildToggle(
-                                context,
-                                value: userData.smartReminders,
-                                onChanged: (val) {
-                                  provider.toggleSmartReminders(val);
-                                },
-                              ),
-                            ],
-                          ),
-                          if (userData.smartReminders) ...[
-                            SizedBox(height: 12.h),
-                            Container(
-                              padding: EdgeInsets.all(12.w),
-                              decoration: BoxDecoration(
-                                color: context.colors.primary.withValues(alpha: 0.04),
-                                borderRadius: BorderRadius.circular(12.r),
-                              ),
-                              child: Row(
-                                children: [
-                                  Icon(Icons.info_outline_rounded, size: 16.sp, color: context.colors.primary),
-                                  SizedBox(width: 8.w),
-                                  Expanded(
-                                    child: Text(
-                                      'Auto-set to every ${provider.effectiveInterval} min based on your ${userData.goal}ml goal',
-                                      style: TextStyle(
-                                        fontSize: 11.sp,
-                                        color: context.colors.primary,
-                                      ),
-                                    ),
-                                  ),
-                                  SizedBox(width: 8.w),
-                                  // Regenerate button
-                                  GestureDetector(
-                                    onTap: () {
-                                      HapticFeedback.lightImpact();
-                                      provider.regenerateSmartReminders();
-                                      TopSnackBar.show(context, message: 'Reminders recalculated ✨', type: TopSnackBarType.success);
-                                    },
-                                    child: Container(
-                                      padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
-                                      decoration: BoxDecoration(
-                                        color: context.colors.primary.withValues(alpha: 0.1),
-                                        borderRadius: BorderRadius.circular(8.r),
-                                      ),
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Icon(Icons.refresh_rounded, size: 12.sp, color: context.colors.primary),
-                                          SizedBox(width: 4.w),
-                                          Text('Reset', style: TextStyle(fontSize: 10.sp, fontWeight: FontWeight.w600, color: context.colors.primary)),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ] else ...[
-                            SizedBox(height: 12.h),
-                            // Manual interval selector
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  'REMINDER INTERVAL',
-                                  style: TextStyle(
-                                    fontSize: 10.sp,
-                                    fontWeight: FontWeight.w700,
-                                    color: context.colors.mutedLight,
-                                    letterSpacing: 1.2,
-                                  ),
-                                ),
-                                // Regenerate with interval
-                                GestureDetector(
-                                  onTap: () {
-                                    HapticFeedback.lightImpact();
-                                    provider.regenerateSmartReminders();
-                                    TopSnackBar.show(context, message: 'Reminders regenerated with ${userData.reminderIntervalMin}min interval', type: TopSnackBarType.success);
-                                  },
-                                  child: Container(
-                                    padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 3.h),
-                                    decoration: BoxDecoration(
-                                      color: context.colors.primary.withValues(alpha: 0.08),
-                                      borderRadius: BorderRadius.circular(6.r),
-                                    ),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Icon(Icons.autorenew_rounded, size: 11.sp, color: context.colors.primary),
-                                        SizedBox(width: 3.w),
-                                        Text('Regenerate', style: TextStyle(fontSize: 9.sp, fontWeight: FontWeight.w600, color: context.colors.primary)),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            SizedBox(height: 8.h),
-                            Wrap(
-                              spacing: 8.w,
-                              runSpacing: 8.h,
-                              children: [30, 45, 60, 90, 120, 180].map((mins) {
-                                final isSelected = userData.reminderIntervalMin == mins;
-                                final label = mins >= 60 
-                                    ? '${mins ~/ 60}h${mins % 60 > 0 ? ' ${mins % 60}m' : ''}'
-                                    : '${mins}m';
-                                return GestureDetector(
-                                  onTap: () {
-                                    HapticFeedback.lightImpact();
-                                    provider.updateReminderInterval(mins);
-                                  },
-                                  child: AnimatedContainer(
-                                    duration: const Duration(milliseconds: 150),
-                                    padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
-                                    decoration: BoxDecoration(
-                                      color: isSelected
-                                          ? context.colors.primary.withValues(alpha: 0.12)
-                                          : context.colors.softLight,
-                                      borderRadius: BorderRadius.circular(10.r),
-                                      border: Border.all(
-                                        color: isSelected
-                                            ? context.colors.primary
-                                            : Colors.transparent,
-                                      ),
-                                    ),
-                                    child: Text(
-                                      label,
-                                      style: TextStyle(
-                                        fontSize: 12.sp,
-                                        fontWeight: FontWeight.w700,
-                                        color: isSelected
-                                            ? context.colors.primary
-                                            : context.colors.text,
-                                      ),
-                                    ),
-                                  ),
-                                );
-                              }).toList(),
-                            ),
-                          ],
-                          SizedBox(height: 24.h),
-                          Divider(color: context.colors.softLight, height: 1),
-                          SizedBox(height: 16.h),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                "Today's Reminders",
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 14.sp,
-                                  color: context.colors.primaryDark,
-                                ),
-                              ),
-                              Container(
-                                padding: EdgeInsets.symmetric(
-                                    horizontal: 10.w, vertical: 4.h),
-                                decoration: BoxDecoration(
-                                  color: context.colors.primary.withValues(alpha: 0.09),
-                                  borderRadius: BorderRadius.circular(8.r),
-                                ),
-                                child: Text(
-                                  '${provider.generatedReminders.length} set',
-                                  style: TextStyle(
-                                    fontSize: 12.sp,
-                                    fontWeight: FontWeight.w600,
-                                    color: context.colors.primary,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          SizedBox(height: 14.h),
-                          ..._buildRemindersList(context, provider),
-                        ],
+                    // Aqua Reminder Navigation Card
+                    _buildNavCard(
+                      context,
+                      title: 'Aqua Reminders',
+                      subtitle: '${provider.generatedReminders.length} reminders • ${userData.smartReminders ? 'Smart' : 'Manual'}',
+                      icon: Icons.notifications_active_rounded,
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const AquaReminderScreen()),
                       ),
                     ),
-                    SizedBox(height: 12.h),
-
-                    // Add custom reminder button — ALWAYS visible
-                    _buildAddReminderButton(context, provider),
                     SizedBox(height: 16.h),
 
                     // Sound & Effects card
@@ -584,6 +371,80 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     );
   }
 
+  Widget _buildNavCard(
+    BuildContext context, {
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required VoidCallback onTap,
+  }) {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: context.colors.card,
+        borderRadius: BorderRadius.circular(20.r),
+        border: Border.all(color: context.colors.softLight),
+        boxShadow: [
+          BoxShadow(
+            color: context.colors.primary.withValues(alpha: 0.07),
+            blurRadius: 16,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () {
+            HapticFeedback.lightImpact();
+            onTap();
+          },
+          borderRadius: BorderRadius.circular(20.r),
+          child: Padding(
+            padding: EdgeInsets.all(16.w),
+            child: Row(
+              children: [
+                Container(
+                  width: 44.w,
+                  height: 44.h,
+                  decoration: BoxDecoration(
+                    gradient: context.colors.primaryGradient,
+                    borderRadius: BorderRadius.circular(12.r),
+                  ),
+                  child: Icon(icon, color: Colors.white, size: 22.sp),
+                ),
+                SizedBox(width: 14.w),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: TextStyle(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 15.sp,
+                          color: context.colors.primaryDark,
+                        ),
+                      ),
+                      Text(
+                        subtitle,
+                        style: TextStyle(
+                          fontSize: 12.sp,
+                          color: context.colors.mutedLight,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(Icons.arrow_forward_ios_rounded, size: 14.sp, color: context.colors.mutedLight),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Future<void> _pickTime(
     BuildContext context,
     String current,
@@ -605,188 +466,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     }
   }
 
-  Widget _buildAddReminderButton(BuildContext context, HydrationProvider provider) {
-    return Material(
-      color: context.colors.card,
-      borderRadius: BorderRadius.circular(16.r),
-      child: InkWell(
-        onTap: () async {
-          HapticFeedback.lightImpact();
-          final picked = await showTimePicker(
-            context: context,
-            initialTime: TimeOfDay.now(),
-          );
-          if (picked != null) {
-            provider.addCustomReminder(picked);
-            if (context.mounted) {
-              TopSnackBar.show(context, message: 'Reminder added at ${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')} 🔔', type: TopSnackBarType.success);
-            }
-          }
-        },
-        borderRadius: BorderRadius.circular(16.r),
-        child: Container(
-          width: double.infinity,
-          padding: EdgeInsets.symmetric(vertical: 14.h),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16.r),
-            border: Border.all(
-              color: context.colors.primary.withValues(alpha: 0.3),
-              width: 1.5,
-            ),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.add_rounded, size: 18.sp, color: context.colors.primary),
-              SizedBox(width: 8.w),
-              Text(
-                'Add Custom Reminder',
-                style: TextStyle(
-                  fontSize: 14.sp,
-                  fontWeight: FontWeight.w700,
-                  color: context.colors.primary,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 
-  /// ALL reminders are editable and deletable, regardless of smart/manual mode
-  List<Widget> _buildRemindersList(BuildContext context, HydrationProvider provider) {
-    final now = TimeOfDay.now();
-    final reminders = provider.generatedReminders;
-
-    if (reminders.isEmpty) {
-      return [
-        Padding(
-          padding: EdgeInsets.symmetric(vertical: 20.h),
-          child: Center(
-            child: Text(
-              'No reminders set. Tap "Add Custom Reminder" below!',
-              style: TextStyle(fontSize: 12.sp, color: context.colors.mutedLight),
-              textAlign: TextAlign.center,
-            ),
-          ),
-        ),
-      ];
-    }
-
-    return reminders.asMap().entries.map((entry) {
-      final idx = entry.key;
-      final t = entry.value;
-      final isPast = t.hour < now.hour || (t.hour == now.hour && t.minute <= now.minute);
-      final timeStr = '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
-      
-      // Get the preview message for this time
-      final previewMsg = NotificationService.getMessageForTime(t.hour);
-
-      return Container(
-        padding: EdgeInsets.symmetric(vertical: 10.h),
-        decoration: BoxDecoration(
-          border: Border(
-            bottom: BorderSide(color: context.colors.softLight, width: 1.w),
-          ),
-        ),
-        child: Row(
-          children: [
-            // Status indicator
-            Container(
-              width: 36.w,
-              height: 36.h,
-              decoration: BoxDecoration(
-                color: isPast
-                    ? context.colors.primary.withValues(alpha: 0.09)
-                    : context.colors.softLight,
-                borderRadius: BorderRadius.circular(12.r),
-              ),
-              child: Center(
-                child: isPast
-                    ? Icon(Icons.check_rounded, size: 16.sp, color: context.colors.primary)
-                    : Text('💧', style: TextStyle(fontSize: 16.sp)),
-              ),
-            ),
-            SizedBox(width: 12.w),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    previewMsg,
-                    style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 12.sp,
-                      color: isPast ? context.colors.mutedLight : context.colors.text,
-                      decoration: isPast ? TextDecoration.lineThrough : null,
-                    ),
-                  ),
-                  Text(
-                    timeStr,
-                    style: TextStyle(
-                      fontSize: 11.sp,
-                      fontWeight: FontWeight.w700,
-                      color: isPast ? context.colors.mutedLight : context.colors.primary,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            // Edit button
-            Material(
-              color: Colors.transparent,
-              child: InkWell(
-                onTap: () async {
-                  HapticFeedback.lightImpact();
-                  final picked = await showTimePicker(
-                    context: context,
-                    initialTime: t,
-                  );
-                  if (picked != null) {
-                    provider.updateCustomReminder(idx, picked);
-                    if (context.mounted) {
-                      TopSnackBar.show(context, message: 'Reminder updated ✏️', type: TopSnackBarType.info);
-                    }
-                  }
-                },
-                borderRadius: BorderRadius.circular(8.r),
-                child: Padding(
-                  padding: EdgeInsets.all(6.r),
-                  child: Icon(
-                    Icons.edit_rounded,
-                    size: 16.sp,
-                    color: context.colors.primary.withValues(alpha: 0.5),
-                  ),
-                ),
-              ),
-            ),
-            SizedBox(width: 2.w),
-            // Delete button
-            Material(
-              color: Colors.transparent,
-              child: InkWell(
-                onTap: () {
-                  HapticFeedback.lightImpact();
-                  provider.removeCustomReminder(idx);
-                  TopSnackBar.show(context, message: 'Reminder removed', type: TopSnackBarType.error);
-                },
-                borderRadius: BorderRadius.circular(8.r),
-                child: Padding(
-                  padding: EdgeInsets.all(6.r),
-                  child: Icon(
-                    Icons.delete_outline_rounded,
-                    size: 16.sp,
-                    color: context.colors.danger.withValues(alpha: 0.5),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      );
-    }).toList();
-  }
 
   void _showSoundPicker(BuildContext context, HydrationProvider provider) {
     showModalBottomSheet(

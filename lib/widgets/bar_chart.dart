@@ -93,10 +93,10 @@ class _SimpleBarChartState extends State<SimpleBarChart>
         // Bars
         ClipRect(
           child: SizedBox(
-          height: 100.h,
+          height: 125.h,
           child: LayoutBuilder(
             builder: (context, constraints) {
-              final maxBarH = constraints.maxHeight - 30.h; // Reserve for bottom label + top value label
+              final maxBarH = constraints.maxHeight - 48.h; // Reserve space for 2-line bottom labels + top ml labels
               return AnimatedBuilder(
                 animation: _controller,
                 builder: (context, _) {
@@ -123,7 +123,7 @@ class _SimpleBarChartState extends State<SimpleBarChart>
                           ? (targetHeight * animVal).clamp(4.0, maxBarH)
                           : 4.0;
 
-                      // Adaptive horizontal padding based on bar count
+                      final isGoalMet = widget.referenceMax != null && widget.referenceMax! > 0 && widget.data[i] >= widget.referenceMax!;
                       final hPad = totalBars > 10 ? 1.5.w : (totalBars > 7 ? 2.0.w : 3.0.w);
                       final fontSize = totalBars > 10 ? 7.sp : (totalBars > 7 ? 8.sp : 9.sp);
 
@@ -133,8 +133,8 @@ class _SimpleBarChartState extends State<SimpleBarChart>
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.end,
                             children: [
-                              // Value label on highlighted bar
-                              if (isHighlighted && widget.data[i] > 0)
+                              // Value label on bar
+                              if (widget.data[i] > 0)
                                 Padding(
                                   padding: EdgeInsets.only(bottom: 2.h),
                                   child: FittedBox(
@@ -143,8 +143,12 @@ class _SimpleBarChartState extends State<SimpleBarChart>
                                       _formatMl(widget.data[i]),
                                       style: TextStyle(
                                         fontSize: 7.sp,
-                                        fontWeight: FontWeight.w700,
-                                        color: context.colors.primary,
+                                        fontWeight: isHighlighted ? FontWeight.w800 : FontWeight.w600,
+                                        color: isGoalMet 
+                                            ? context.colors.success 
+                                            : (isHighlighted 
+                                                ? context.colors.primary 
+                                                : context.colors.primary.withValues(alpha: 0.6)),
                                       ),
                                     ),
                                   ),
@@ -152,17 +156,26 @@ class _SimpleBarChartState extends State<SimpleBarChart>
                               Container(
                                 height: barHeight,
                                 decoration: BoxDecoration(
-                                  gradient: isHighlighted
+                                  gradient: isGoalMet
                                       ? LinearGradient(
                                           begin: Alignment.topCenter,
                                           end: Alignment.bottomCenter,
                                           colors: [
-                                            context.colors.seafoam,
-                                            context.colors.primary,
+                                            context.colors.success.withValues(alpha: 0.7),
+                                            context.colors.success,
                                           ],
                                         )
-                                      : null,
-                                  color: isHighlighted
+                                      : (isHighlighted
+                                          ? LinearGradient(
+                                              begin: Alignment.topCenter,
+                                              end: Alignment.bottomCenter,
+                                              colors: [
+                                                context.colors.seafoam,
+                                                context.colors.primary,
+                                              ],
+                                            )
+                                          : null),
+                                  color: (isGoalMet || isHighlighted)
                                       ? null
                                       : widget.data[i] > 0
                                           ? context.colors.primary.withValues(alpha: 0.25)
@@ -171,10 +184,10 @@ class _SimpleBarChartState extends State<SimpleBarChart>
                                     top: Radius.circular(4.r),
                                     bottom: Radius.circular(2.r),
                                   ),
-                                  boxShadow: isHighlighted
+                                  boxShadow: (isGoalMet || isHighlighted)
                                       ? [
                                           BoxShadow(
-                                            color: context.colors.primary.withValues(alpha: 0.25),
+                                            color: (isGoalMet ? context.colors.success : context.colors.primary).withValues(alpha: 0.25),
                                             blurRadius: 10,
                                             offset: const Offset(0, 3),
                                           )
@@ -187,12 +200,15 @@ class _SimpleBarChartState extends State<SimpleBarChart>
                                 fit: BoxFit.scaleDown,
                                 child: Text(
                                   widget.labels[i],
+                                  textAlign: TextAlign.center,
                                   style: TextStyle(
                                     fontSize: fontSize,
                                     fontWeight: isHighlighted ? FontWeight.w700 : FontWeight.w400,
-                                    color: isHighlighted
-                                        ? context.colors.primary
-                                        : context.colors.mutedLight,
+                                    color: isGoalMet 
+                                        ? context.colors.success 
+                                        : (isHighlighted
+                                            ? context.colors.primary
+                                            : context.colors.mutedLight),
                                   ),
                                 ),
                               ),

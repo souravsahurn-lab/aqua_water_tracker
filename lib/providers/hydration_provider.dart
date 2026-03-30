@@ -372,8 +372,10 @@ class HydrationProvider extends ChangeNotifier {
     } else if (period == 'week') {
       List<double> data = List.filled(7, 0.0);
       final now = DateTime.now();
+      final diff = now.weekday == 7 ? 0 : now.weekday;
+      final sunday = now.subtract(Duration(days: diff));
       for (int i = 0; i < 7; i++) {
-        final d = now.subtract(Duration(days: 6 - i)).toIso8601String().split('T')[0];
+        final d = sunday.add(Duration(days: i)).toIso8601String().split('T')[0];
         final sum = _logs.where((l) => l.date == d).fold(0, (p, c) => p + c.ml);
         data[i] = sum.toDouble();
       }
@@ -414,9 +416,11 @@ class HydrationProvider extends ChangeNotifier {
       return '$filled/${data.length}';
     } else if (period == 'week') {
       final now = DateTime.now();
+      final diff = now.weekday == 7 ? 0 : now.weekday;
+      final sunday = now.subtract(Duration(days: diff));
       int hit = 0;
       for (int i = 0; i < 7; i++) {
-        final d = now.subtract(Duration(days: 6 - i)).toIso8601String().split('T')[0];
+        final d = sunday.add(Duration(days: i)).toIso8601String().split('T')[0];
         final sum = _logs.where((l) => l.date == d).fold(0, (p, c) => p + c.ml);
         if (sum >= _userData.goal) hit++;
       }
@@ -450,13 +454,31 @@ class HydrationProvider extends ChangeNotifier {
       currentAvg = todaySum.toDouble();
       prevAvg = yesterdaySum.toDouble();
     } else if (period == 'week') {
-      // This week vs last week
+      // This week vs last week (Daily Averages)
+      final diff = now.weekday == 7 ? 0 : now.weekday;
+      final thisSunday = now.subtract(Duration(days: diff));
+      final lastSunday = thisSunday.subtract(const Duration(days: 7));
+      
+      double thisWeekTotal = 0;
+      int thisWeekDays = 0;
       for (int i = 0; i < 7; i++) {
-        final d = now.subtract(Duration(days: i)).toIso8601String().split('T')[0];
-        currentAvg += _logs.where((l) => l.date == d).fold(0, (p, c) => p + c.ml);
-        final pd = now.subtract(Duration(days: 7 + i)).toIso8601String().split('T')[0];
-        prevAvg += _logs.where((l) => l.date == pd).fold(0, (p, c) => p + c.ml);
+        final dDate = thisSunday.add(Duration(days: i));
+        final d = dDate.toIso8601String().split('T')[0];
+        final sum = _logs.where((l) => l.date == d).fold(0, (p, c) => p + c.ml);
+        thisWeekTotal += sum;
+        if (dDate.isBefore(now) || d == now.toIso8601String().split('T')[0]) {
+          thisWeekDays++;
+        }
       }
+      
+      double lastWeekTotal = 0;
+      for (int i = 0; i < 7; i++) {
+        final pd = lastSunday.add(Duration(days: i)).toIso8601String().split('T')[0];
+        lastWeekTotal += _logs.where((l) => l.date == pd).fold(0, (p, c) => p + c.ml);
+      }
+      
+      currentAvg = thisWeekDays > 0 ? thisWeekTotal / thisWeekDays : 0;
+      prevAvg = lastWeekTotal / 7;
     } else {
       // This month vs last month  
       for (int i = 0; i < 30; i++) {
@@ -538,20 +560,37 @@ class HydrationProvider extends ChangeNotifier {
     return status;
   }
 
-  Map<String, int> get drinkTypeBreakdown {
-    final today = DateTime.now().toIso8601String().split('T')[0];
-    Map<String, int> breakdown = {
-      'Water': 0,
-      'Tea / Coffee': 0,
-      'Juice': 0,
-      'Sports drinks': 0,
-    };
-    for (var l in _logs.where((e) => e.date == today)) {
-      if (breakdown.containsKey(l.label)) {
-        breakdown[l.label] = breakdown[l.label]! + l.ml;
-      } else {
-        breakdown['Water'] = breakdown['Water']! + l.ml; // Fallback
-      }
+  Map<String, int> getDrinkTypeBreakdown(String period, [DateTime? selectedDate]) {
+    Iterable<DrinkLog> filteredLogs = [];
+    final now = DateTime.now();
+
+    if (period == 'day') {
+      final todayStr = now.toIso8601String().split('T')[0];
+      filteredLogs = _logs.where((e) => e.date == todayStr);
+    } else if (period == 'week') {
+      final diff = now.weekday == 7 ? 0 : now.weekday;
+      final sunday = now.subtract(Duration(days: diff));
+      final saturday = sunday.add(const Duration(days: 6));
+      
+      filteredLogs = _logs.where((e) {
+        try {
+          final logDate = DateTime.parse(e.date);
+           final start = DateTime(sunday.year, sunday.month, sunday.day);
+           final end = DateTime(saturday.year, saturday.month, saturday.day, 23, 59, 59);
+           return logDate.isAfter(start.subtract(const Duration(seconds: 1))) && 
+                  logDate.isBefore(end.add(const Duration(seconds: 1)));
+        } catch (_) {
+          return false;
+        }
+      });
+    } else if (period == 'month' && selectedDate != null) {
+      final dateStr = selectedDate.toIso8601String().split('T')[0];
+      filteredLogs = _logs.where((e) => e.date == dateStr);
+    }
+
+    Map<String, int> breakdown = {};
+    for (var l in filteredLogs) {
+      breakdown[l.label] = (breakdown[l.label] ?? 0) + l.ml;
     }
     return breakdown;
   }
@@ -583,6 +622,19 @@ class HydrationProvider extends ChangeNotifier {
         if (a.hour != b.hour) return a.hour.compareTo(b.hour);
         return a.minute.compareTo(b.minute);
       });
+  }
+
+  String get nextReminderTimeStr {
+    final now = TimeOfDay.now();
+    for (var r in generatedReminders) {
+      if (r.hour > now.hour || (r.hour == now.hour && r.minute > now.minute)) {
+        final hr = r.hour == 0 ? 12 : (r.hour > 12 ? r.hour - 12 : r.hour);
+        final min = r.minute.toString().padLeft(2, '0');
+        final ampm = r.hour < 12 ? 'AM' : 'PM';
+        return '$hr:$min $ampm';
+      }
+    }
+    return '--:--';
   }
 
   /// The effective interval in minutes (for display)
@@ -867,25 +919,59 @@ class HydrationProvider extends ChangeNotifier {
     return _logs.where((l) => l.date == today).toList();
   }
 
-  /// Export data as formatted string
-  String exportDataAsText() {
+  /// Generate shareable text based on period
+  String? getShareData(String period, {DateTime? customDate}) {
+    final now = DateTime.now();
+    List<DrinkLog> filteredLogs = [];
+    String title = "";
+
+    if (period == 'today') {
+      final todayStr = now.toIso8601String().split('T')[0];
+      filteredLogs = _logs.where((l) => l.date == todayStr).toList();
+      title = "Today's Intake (${todayStr})";
+    } else if (period == 'week') {
+      final diff = now.weekday == 7 ? 0 : now.weekday;
+      final sunday = now.subtract(Duration(days: diff));
+      final start = DateTime(sunday.year, sunday.month, sunday.day);
+      filteredLogs = _logs.where((l) {
+        try {
+          final d = DateTime.parse(l.date);
+          return d.isAfter(start.subtract(const Duration(seconds: 1)));
+        } catch (_) { return false; }
+      }).toList();
+      title = "Last 7 Days (from ${start.toIso8601String().split('T')[0]})";
+    } else if (period == 'month') {
+      filteredLogs = _logs.where((l) {
+        try {
+          final d = DateTime.parse(l.date);
+          return d.year == now.year && d.month == now.month;
+        } catch (_) { return false; }
+      }).toList();
+      title = "Intake for ${now.month}/${now.year}";
+    } else if (period == 'custom' && customDate != null) {
+      final dateStr = customDate.toIso8601String().split('T')[0];
+      filteredLogs = _logs.where((l) => l.date == dateStr).toList();
+      title = "Intake for ${dateStr}";
+    }
+
+    if (filteredLogs.isEmpty) return null;
+
     final buffer = StringBuffer();
-    buffer.writeln('Aqua Water Tracker — Data Export');
-    buffer.writeln('Generated: ${DateTime.now().toString().split('.')[0]}');
+    buffer.writeln('Aqua Water Tracker — Hydration Report');
+    buffer.writeln('Report: $title');
+    buffer.writeln('Generated: ${now.toString().split('.')[0]}');
     buffer.writeln('');
     buffer.writeln('Profile:');
-    buffer.writeln('  Name: ${_userData.name}');
-    buffer.writeln('  Weight: ${_userData.weight} kg');
-    buffer.writeln('  Height: ${_userData.height} cm');
-    buffer.writeln('  Activity: ${_userData.activity}');
-    buffer.writeln('  Daily Goal: ${_userData.goal} ml');
-    buffer.writeln('  Streak: ${_userData.streak} days');
+    buffer.writeln('  User: ${_userData.name}');
+    buffer.writeln('  Goal: ${_userData.goal}ml');
+    buffer.writeln('  Total Drunk: ${filteredLogs.fold(0, (sum, l) => sum + l.ml)}ml');
     buffer.writeln('');
-    buffer.writeln('Drink Log (last 30 entries):');
-    final recent = _logs.take(30);
-    for (var log in recent) {
-      buffer.writeln('  ${log.date} ${log.time} — ${log.label}: ${log.ml} ml');
+    buffer.writeln('Detailed Logs:');
+    for (var log in filteredLogs.reversed) {
+      buffer.writeln('  [${log.date} ${log.time}] — ${log.label}: ${log.ml}ml');
     }
+    buffer.writeln('');
+    buffer.writeln('Stay hydrated with Aqua 💧');
     return buffer.toString();
   }
 }

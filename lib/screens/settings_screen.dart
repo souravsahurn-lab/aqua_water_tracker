@@ -6,6 +6,7 @@ import '../providers/hydration_provider.dart';
 import '../widgets/app_button.dart';
 import '../widgets/top_snackbar.dart';
 import 'package:flutter/services.dart';
+import 'package:share_plus/share_plus.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -241,9 +242,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         _settingRow(
                           c: c,
                           emoji: '📤',
-                          label: 'Export Data',
-                          value: 'Share',
-                          onTap: () => _exportData(context, provider),
+                          label: 'Share Data',
+                          value: 'Select',
+                          onTap: () => _showShareSheet(context, provider),
                         ),
                         _settingRow(
                           c: c,
@@ -720,13 +721,100 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   // ═══════════════════════════════════════════════════════════════════
-  // Export Data
+  // Share Data
   // ═══════════════════════════════════════════════════════════════════
 
-  void _exportData(BuildContext context, HydrationProvider provider) {
-    final data = provider.exportDataAsText();
-    Clipboard.setData(ClipboardData(text: data));
-    TopSnackBar.show(context, message: 'Data copied to clipboard 📋', type: TopSnackBarType.success);
+  void _showShareSheet(BuildContext context, HydrationProvider provider) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (ctx) => Container(
+        padding: EdgeInsets.fromLTRB(24.w, 24.h, 24.w, 40.h + MediaQuery.of(ctx).padding.bottom),
+        decoration: BoxDecoration(
+          color: context.colors.card,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(32.r)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(child: Container(width: 40.w, height: 4.h, decoration: BoxDecoration(color: context.colors.softLight, borderRadius: BorderRadius.circular(10.r)))),
+            SizedBox(height: 24.h),
+            Text('Share Hydration Data', style: TextStyle(fontSize: 20.sp, fontWeight: FontWeight.w800, color: context.colors.primaryDark)),
+            Text('Select the period you want to share', style: TextStyle(fontSize: 13.sp, color: context.colors.mutedLight)),
+            SizedBox(height: 24.h),
+            _shareOption(context, provider, 'today', 'Today', '📅'),
+            _shareOption(context, provider, 'week', 'Last 7 Days', '🗓️'),
+            _shareOption(context, provider, 'month', 'This Month', '📊'),
+            _shareOption(context, provider, 'custom', 'Select Specific Day', '🔍'),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _shareOption(BuildContext context, HydrationProvider provider, String type, String label, String icon) {
+    return GestureDetector(
+      onTap: () async {
+        HapticFeedback.lightImpact();
+        DateTime? selectedDate;
+        if (type == 'custom') {
+          selectedDate = await showDatePicker(
+            context: context,
+            initialDate: DateTime.now(),
+            firstDate: DateTime(2020),
+            lastDate: DateTime.now(),
+            builder: (context, child) {
+              return Theme(
+                data: Theme.of(context).copyWith(
+                  colorScheme: ColorScheme.light(
+                    primary: context.colors.primary,
+                    onPrimary: Colors.white,
+                    onSurface: context.colors.primaryDark,
+                  ),
+                ),
+                child: child!,
+              );
+            },
+          );
+          if (selectedDate == null) return;
+        }
+
+        final data = provider.getShareData(type, customDate: selectedDate);
+        if (data == null) {
+          if (context.mounted) {
+            TopSnackBar.show(context, message: 'There is no data for this period 📭', type: TopSnackBarType.error);
+          }
+          return;
+        }
+
+        Navigator.pop(context);
+        await Share.share(data, subject: 'Aqua Water Tracker Data');
+      },
+      child: Container(
+        margin: EdgeInsets.only(bottom: 12.h),
+        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
+        decoration: BoxDecoration(
+          color: context.colors.bg,
+          borderRadius: BorderRadius.circular(16.r),
+          border: Border.all(color: context.colors.softLight),
+        ),
+        child: Row(
+          children: [
+            Text(icon, style: TextStyle(fontSize: 22.sp)),
+            SizedBox(width: 16.w),
+            Expanded(
+              child: Text(
+                label,
+                style: TextStyle(fontSize: 15.sp, fontWeight: FontWeight.w700, color: context.colors.primaryDark),
+              ),
+            ),
+            Icon(Icons.chevron_right_rounded, color: context.colors.mutedLight),
+          ],
+        ),
+      ),
+    );
   }
 
   // ═══════════════════════════════════════════════════════════════════

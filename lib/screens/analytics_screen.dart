@@ -145,13 +145,10 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                               : _getWeekLabels();
                           final highlightIdx = period == 'day'
                               ? provider.getHourlyHighlightIndex()
-                              : 6; // today = last bar in week
+                              : (DateTime.now().weekday == 7 ? 0 : DateTime.now().weekday);
 
-                          // Reference max: for day, show growth relative to a "standard" drink (e.g. 1/8th of goal)
-                          // if a drink exceeds this, the graph scales up.
-                          final refMax = period == 'day'
-                              ? (goal / 8).clamp(250.0, double.infinity)
-                              : goal;
+                          // Reference max: scale to the full daily goal, even for hourly bars.
+                          final refMax = goal;
 
                           return Column(
                             children: [
@@ -176,7 +173,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                                 data: barData,
                                 labels: labels,
                                 highlightIndex: highlightIdx,
-                                totalLabel: 'Total: ${_formatTotalMl(total)}',
+                                totalLabel: period == 'day' ? null : 'Total: ${_formatTotalMl(total)}',
                                 referenceMax: refMax,
                               ),
                               SizedBox(height: 16.h),
@@ -205,36 +202,33 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                           ),
                           SizedBox(height: 14.h),
                           Builder(builder: (context) {
-                            final map = provider.drinkTypeBreakdown;
+                            final map = provider.getDrinkTypeBreakdown(period, _selectedDate);
                             final total = map.values.fold(0, (a, b) => a + b);
                             final max = total == 0 ? 1 : total;
+                            
+                            if (map.isEmpty) {
+                               return Padding(
+                                 padding: EdgeInsets.symmetric(vertical: 20.h),
+                                 child: Center(
+                                   child: Text('No drinks logged yet.', style: TextStyle(color: context.colors.mutedLight, fontSize: 12.sp)),
+                                 ),
+                               );
+                            }
+
+                            final List<Color> palette = [context.colors.primary, context.colors.accent, context.colors.warning, context.colors.danger, context.colors.seafoam];
+                            int colorIdx = 0;
+
                             return Column(
-                              children: [
-                                MiniBar(
-                                    val: map['Water']!.toDouble(),
+                              children: map.entries.map((entry) {
+                                final color = palette[colorIdx % palette.length];
+                                colorIdx++;
+                                return MiniBar(
+                                    val: entry.value.toDouble(),
                                     max: max.toDouble(),
-                                    color: context.colors.primary,
-                                    label: 'Water',
-                                    sub: total > 0 ? '${map['Water']} ml (${(map['Water']! / total * 100).round()}%)' : '0 ml'),
-                                MiniBar(
-                                    val: map['Tea / Coffee']!.toDouble(),
-                                    max: max.toDouble(),
-                                    color: context.colors.accent,
-                                    label: 'Tea / Coffee',
-                                    sub: total > 0 ? '${map['Tea / Coffee']} ml (${(map['Tea / Coffee']! / total * 100).round()}%)' : '0 ml'),
-                                MiniBar(
-                                    val: map['Juice']!.toDouble(),
-                                    max: max.toDouble(),
-                                    color: context.colors.warning,
-                                    label: 'Juice',
-                                    sub: total > 0 ? '${map['Juice']} ml (${(map['Juice']! / total * 100).round()}%)' : '0 ml'),
-                                MiniBar(
-                                    val: map['Sports drinks']!.toDouble(),
-                                    max: max.toDouble(),
-                                    color: context.colors.danger,
-                                    label: 'Sports drinks',
-                                    sub: total > 0 ? '${map['Sports drinks']} ml (${(map['Sports drinks']! / total * 100).round()}%)' : '0 ml'),
-                              ],
+                                    color: color,
+                                    label: entry.key,
+                                    sub: total > 0 ? '${entry.value} ml (${(entry.value / total * 100).round()}%)' : '0 ml');
+                              }).toList(),
                             );
                           }),
                         ],
@@ -332,20 +326,29 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
   }
 
   Widget _buildStatsSummary(BuildContext context, HydrationProvider provider, String period) {
-    final avg = provider.getAverageIntake(period);
-    final best = provider.getBestIntake(period);
-    final goalHit = provider.getGoalHitStr(period);
-
     String formatMl(int ml) {
       if (ml >= 1000) return '${(ml / 1000).toStringAsFixed(1)}L';
       return '$ml ml';
     }
 
-    final stats = [
-      ['💧', formatMl(avg), 'Avg'],
-      ['🏆', formatMl(best), 'Best'],
-      ['🎯', goalHit, period == 'day' ? 'Active' : 'Hit'],
-    ];
+    final List<List<String>> stats;
+
+    if (period == 'day') {
+      stats = [
+        ['💧', formatMl(provider.userData.drunk), 'Total'],
+        ['🔔', provider.nextReminderTimeStr, 'Next Reminder'],
+      ];
+    } else {
+      final avg = provider.getAverageIntake(period);
+      final best = provider.getBestIntake(period);
+      final goalHit = provider.getGoalHitStr(period);
+
+      stats = [
+        ['💧', formatMl(avg), 'Avg'],
+        ['🏆', formatMl(best), 'Best'],
+        ['🎯', goalHit, 'Hit'],
+      ];
+    }
 
     return Row(
       children: stats.map((s) {
@@ -597,11 +600,13 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
 
   List<String> _getWeekLabels() {
     final now = DateTime.now();
-    final dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    final diff = now.weekday == 7 ? 0 : now.weekday;
+    final sunday = now.subtract(Duration(days: diff));
+    final dayChars = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
     List<String> labels = [];
-    for (int i = 6; i >= 0; i--) {
-      final d = now.subtract(Duration(days: i));
-      labels.add(dayNames[d.weekday - 1].substring(0, 1));
+    for (int i = 0; i < 7; i++) {
+        final d = sunday.add(Duration(days: i));
+        labels.add('${dayChars[i]}\n${d.day}');
     }
     return labels;
   }
