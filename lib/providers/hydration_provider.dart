@@ -12,6 +12,7 @@ class HydrationProvider extends ChangeNotifier {
   int _setupStep = 0;
   bool _isInit = false;
   bool _isSetupComplete = false;
+  bool _remindersInitialized = false;
 
   HydrationProvider() {
     _loadFromPrefs();
@@ -41,6 +42,14 @@ class HydrationProvider extends ChangeNotifier {
 
     _setupStep = prefs.getInt('setupStep') ?? 0;
     _isSetupComplete = prefs.getBool('isSetupComplete') ?? false;
+    _remindersInitialized = prefs.getBool('remindersInitialized') ?? false;
+
+    // Backward compatibility generation for older version where this flag didn't exist
+    if (!_remindersInitialized && _userData.customReminderTimes.isEmpty && _userData.wakeTime.isNotEmpty) {
+      _regenerateSmartTimes();
+      _remindersInitialized = true;
+      prefs.setBool('remindersInitialized', true);
+    }
 
     _isInit = true;
     _checkDailyReset();
@@ -55,6 +64,7 @@ class HydrationProvider extends ChangeNotifier {
     await prefs.setString('logs', jsonEncode(_logs.map((e) => e.toJson()).toList()));
     await prefs.setInt('setupStep', _setupStep);
     await prefs.setBool('isSetupComplete', _isSetupComplete);
+    await prefs.setBool('remindersInitialized', _remindersInitialized);
   }
 
   @override
@@ -554,9 +564,11 @@ class HydrationProvider extends ChangeNotifier {
   List<TimeOfDay> get generatedReminders {
     if (_userData.wakeTime.isEmpty || _userData.sleepTime.isEmpty) return [];
 
-    // If no times stored yet, generate them
-    if (_userData.customReminderTimes.isEmpty) {
+    // Only generate if they have NEVER been initialized.
+    // This allows the user to delete ALL reminders (leaving list empty) without them auto-regenerating.
+    if (!_remindersInitialized) {
       _regenerateSmartTimes();
+      _remindersInitialized = true;
       _saveToPrefs();
     }
 
