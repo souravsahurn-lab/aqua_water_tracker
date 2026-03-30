@@ -263,28 +263,99 @@ class HydrationProvider extends ChangeNotifier {
   // Analytics Computed Data
   // ═══════════════════════════════════════════════════════════════════
 
+  /// Structurally generates 2-hour time slots from wake to sleep
+  List<int> _getHourlySlotStarts() {
+    int wakeH = 7;
+    int sleepH = 22;
+    try {
+      wakeH = int.parse(_userData.wakeTime.split(':')[0]);
+      sleepH = int.parse(_userData.sleepTime.split(':')[0]);
+    } catch (_) {}
+
+    if (sleepH <= wakeH) sleepH += 24;
+
+    List<int> slots = [];
+    for (int h = wakeH; h < sleepH; h += 2) {
+      slots.add(h % 24);
+    }
+    
+    // Add "Late night" if logs exist after sleep time
+    final today = DateTime.now().toIso8601String().split('T')[0];
+    final todayLogs = _logs.where((e) => e.date == today);
+    
+    // Check for logs outside the range (before wake or after sleep)
+    bool hasEarly = false;
+    bool hasLate = false;
+    for (var l in todayLogs) {
+      try {
+        final logH = int.parse(l.time.split(':')[0]);
+        if (logH < wakeH) hasEarly = true;
+        if (logH >= sleepH % 24 && logH >= (sleepH - 24).abs()) {
+           // This logic is a bit complex for wrap-around, 
+           // let's just check if it's covered by existing slots
+           bool covered = false;
+           for (var s in slots) {
+             if (logH >= s && logH < s + 2) covered = true;
+           }
+           if (!covered) hasLate = true;
+        }
+      } catch (_) {}
+    }
+
+    if (hasEarly && !slots.contains((wakeH - 2) % 24)) {
+      slots.insert(0, (wakeH - 2) % 24);
+    }
+    if (hasLate) {
+      slots.add(sleepH % 24);
+    }
+
+    if (slots.isEmpty) slots = [7, 9, 11, 13, 15, 17, 19, 21];
+    return slots;
+  }
+
+  /// Labels for the hourly bar chart (per 2-hour slot range)
+  List<String> getHourlyLabels() {
+    final starts = _getHourlySlotStarts();
+    return starts.map((h) {
+      final hEnd = (h + 2) % 24;
+
+      final h12S = h == 0 ? 12 : (h > 12 ? h - 12 : h);
+      final suffixS = h < 12 ? 'a' : 'p';
+
+      final h12E = hEnd == 0 ? 12 : (hEnd > 12 ? hEnd - 12 : hEnd);
+      final suffixE = hEnd < 12 ? 'a' : 'p';
+
+      if (suffixS == suffixE) {
+        return '$h12S-$h12E$suffixE';
+      }
+      return '$h12S$suffixS-$h12E$suffixE';
+    }).toList();
+  }
+
+  /// Highlight the slot containing the current hour
+  int getHourlyHighlightIndex() {
+    final starts = _getHourlySlotStarts();
+    final nowH = DateTime.now().hour;
+    int bestIdx = 0;
+    for (int i = 0; i < starts.length; i++) {
+       if (nowH >= starts[i]) bestIdx = i;
+    }
+    return bestIdx;
+  }
+
   List<double> getBarData(String period) {
     if (period == 'day') {
-      List<double> data = List.filled(7, 0.0);
+      final slots = _getHourlySlotStarts();
+      List<double> data = List.filled(slots.length, 0.0);
       final today = DateTime.now().toIso8601String().split('T')[0];
       for (var l in _logs.where((e) => e.date == today)) {
         try {
-          final h = int.parse(l.time.split(':')[0]);
-          if (h >= 6 && h < 9) {
-            data[0] += l.ml;
-          } else if (h >= 9 && h < 11) {
-            data[1] += l.ml;
-          } else if (h >= 11 && h < 13) {
-            data[2] += l.ml;
-          } else if (h >= 13 && h < 15) {
-            data[3] += l.ml;
-          } else if (h >= 15 && h < 17) {
-            data[4] += l.ml;
-          } else if (h >= 17 && h < 20) {
-            data[5] += l.ml;
-          } else {
-            data[6] += l.ml;
+          final logH = int.parse(l.time.split(':')[0]);
+          int targetSlot = 0;
+          for (int i = 0; i < slots.length; i++) {
+             if (logH >= slots[i]) targetSlot = i;
           }
+          data[targetSlot] += l.ml;
         } catch (_) {}
       }
       return data;
@@ -330,7 +401,7 @@ class HydrationProvider extends ChangeNotifier {
       // For day view: how many time blocks had some intake
       final data = getBarData(period);
       final filled = data.where((d) => d > 0).length;
-      return '$filled/7';
+      return '$filled/${data.length}';
     } else if (period == 'week') {
       final now = DateTime.now();
       int hit = 0;

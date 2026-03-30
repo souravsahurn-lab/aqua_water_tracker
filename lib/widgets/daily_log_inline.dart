@@ -24,227 +24,155 @@ class DailyLogInline extends StatelessWidget {
     final isGoalMet = totalMl >= goal;
     final displayDate = DateFormat('MMMM d, yyyy').format(date);
 
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Header
-        Row(
-          children: [
-            Container(
-              padding: EdgeInsets.all(12.w),
-              decoration: BoxDecoration(
-                color: context.colors.primary.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(16.r),
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.all(20.w),
+      decoration: BoxDecoration(
+        color: context.colors.card,
+        borderRadius: BorderRadius.circular(24.r),
+        border: Border.all(color: isGoalMet ? context.colors.success.withValues(alpha: 0.3) : context.colors.softLight, width: 1.w),
+        boxShadow: [
+          BoxShadow(
+            color: isGoalMet 
+                ? context.colors.success.withValues(alpha: 0.05) 
+                : context.colors.primary.withValues(alpha: 0.05),
+            blurRadius: 15,
+            offset: Offset(0, 5),
+          )
+        ]
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header: Date and Total
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      displayDate,
+                      style: TextStyle(
+                        fontSize: 16.sp,
+                        fontWeight: FontWeight.w800,
+                        color: context.colors.primaryDark,
+                      ),
+                    ),
+                    SizedBox(height: 2.h),
+                    Text(
+                      isGoalMet ? 'Goal Reached! 🎉' : 'Daily Record',
+                      style: TextStyle(
+                        fontSize: 12.sp,
+                        color: isGoalMet ? context.colors.success : context.colors.mutedLight,
+                        fontWeight: isGoalMet ? FontWeight.w600 : FontWeight.w400,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              child: Icon(
-                Icons.calendar_today_rounded,
-                color: context.colors.primary,
-                size: 24.sp,
-              ),
-            ),
-            SizedBox(width: 16.w),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
-                    displayDate,
+                    '$totalMl ml',
                     style: TextStyle(
                       fontSize: 20.sp,
-                      fontWeight: FontWeight.w800,
-                      color: context.colors.primaryDark,
-                      letterSpacing: -0.5,
+                      fontWeight: FontWeight.w900,
+                      color: isGoalMet ? context.colors.success : context.colors.primary,
+                      height: 1,
                     ),
                   ),
                   Text(
-                    'Hydration History',
+                    'of ${goal}ml goal',
                     style: TextStyle(
-                      fontSize: 12.sp,
+                      fontSize: 11.sp,
+                      fontWeight: FontWeight.w500,
                       color: context.colors.mutedLight,
                     ),
                   ),
                 ],
               ),
-            ),
-          ],
-        ),
-        SizedBox(height: 16.h),
-
-        // Total overview card
-        Container(
-          padding: EdgeInsets.all(20.w),
-          decoration: BoxDecoration(
-            color: isGoalMet ? context.colors.success : context.colors.card,
-            borderRadius: BorderRadius.circular(24.r),
-            boxShadow: isGoalMet
-                ? [
-                    BoxShadow(
-                      color: context.colors.success.withValues(alpha: 0.3),
-                      blurRadius: 20,
-                      offset: Offset(0, 8),
-                    )
-                  ]
-                : [
-                    BoxShadow(
-                      color: context.colors.primary.withValues(alpha: 0.05),
-                      blurRadius: 15,
-                      offset: Offset(0, 5),
-                    )
-                  ],
-            border: !isGoalMet ? Border.all(color: context.colors.softLight) : null,
+            ],
           ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Total Intake',
-                    style: TextStyle(
-                      fontSize: 12.sp,
-                      fontWeight: FontWeight.w600,
-                      color: isGoalMet ? Colors.white.withValues(alpha: 0.8) : context.colors.mutedLight,
-                    ),
-                  ),
-                  SizedBox(height: 4.h),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.end,
+          
+          if (dayLogs.isNotEmpty) ...[
+            Padding(
+              padding: EdgeInsets.symmetric(vertical: 12.h),
+              child: Divider(color: context.colors.softLight),
+            ),
+            // Professional, compact vertical log list
+            Column(
+              children: dayLogs.map((item) {
+                return Padding(
+                  padding: EdgeInsets.symmetric(vertical: 5.h),
+                  child: Row(
                     children: [
-                      Text(
-                        '$totalMl',
-                        style: TextStyle(
-                          fontSize: 28.sp,
-                          fontWeight: FontWeight.w900,
-                          color: isGoalMet ? Colors.white : context.colors.primaryDark,
-                          height: 1,
-                          letterSpacing: -1,
+                      // Time
+                      SizedBox(
+                        width: 45.w,
+                        child: Text(
+                          item.time,
+                          style: TextStyle(
+                            fontSize: 12.sp,
+                            fontWeight: FontWeight.w700,
+                            color: context.colors.muted,
+                          ),
                         ),
                       ),
-                      Padding(
-                        padding: EdgeInsets.only(bottom: 2.h, left: 4.w),
-                        child: Text(
-                          '/ ${goal}ml',
-                          style: TextStyle(
-                            fontSize: 14.sp,
-                            fontWeight: FontWeight.w700,
-                            color: isGoalMet ? Colors.white.withValues(alpha: 0.8) : context.colors.muted,
-                          ),
+                      // Icon + Amount
+                      Container(
+                        padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+                        decoration: BoxDecoration(
+                          color: context.colors.softLight,
+                          borderRadius: BorderRadius.circular(6.r),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(item.icon, style: TextStyle(fontSize: 12.sp)),
+                            SizedBox(width: 6.w),
+                            Text(
+                              '${item.ml} ml',
+                              style: TextStyle(
+                                fontSize: 12.sp,
+                                fontWeight: FontWeight.w700,
+                                color: context.colors.primaryDark,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Spacer(),
+                      // Label
+                      Text(
+                        item.label,
+                        style: TextStyle(
+                          fontSize: 12.sp,
+                          color: context.colors.mutedLight,
                         ),
                       ),
                     ],
                   ),
-                ],
-              ),
-              Container(
-                padding: EdgeInsets.all(12.w),
-                decoration: BoxDecoration(
-                  color: isGoalMet ? Colors.white.withValues(alpha: 0.2) : context.colors.primary.withValues(alpha: 0.1),
-                  shape: BoxShape.circle,
+                );
+              }).toList(),
+            ),
+          ] else ...[
+            SizedBox(height: 16.h),
+            Center(
+              child: Text(
+                'No logs for this day.',
+                style: TextStyle(
+                  fontSize: 12.sp,
+                  color: context.colors.mutedLight,
+                  fontStyle: FontStyle.italic,
                 ),
-                child: Icon(
-                  isGoalMet ? Icons.celebration_rounded : Icons.water_drop_rounded,
-                  color: isGoalMet ? Colors.white : context.colors.primary,
-                  size: 24.sp,
-                ),
-              ),
-            ],
-          ),
-        ),
-        
-        SizedBox(height: 24.h),
-        Text(
-          'Logs',
-          style: TextStyle(
-            fontSize: 16.sp,
-            fontWeight: FontWeight.w800,
-            color: context.colors.primaryDark,
-          ),
-        ),
-        SizedBox(height: 12.h),
-
-        // Lists
-        if (dayLogs.isEmpty)
-          Center(
-            child: Padding(
-              padding: EdgeInsets.symmetric(vertical: 32.h),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.history_rounded, size: 48.sp, color: context.colors.soft),
-                  SizedBox(height: 16.h),
-                  Text(
-                    'No records found for this day.',
-                    style: TextStyle(
-                      fontSize: 14.sp,
-                      color: context.colors.mutedLight,
-                    ),
-                  ),
-                ],
               ),
             ),
-          )
-        else
-          ...dayLogs.map((item) {
-            return Container(
-              margin: EdgeInsets.only(bottom: 12.h),
-              padding: EdgeInsets.all(16.w),
-              decoration: BoxDecoration(
-                color: context.colors.card,
-                borderRadius: BorderRadius.circular(16.r),
-                border: Border.all(color: context.colors.softLight, width: 1.w),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    padding: EdgeInsets.all(12.w),
-                    decoration: BoxDecoration(
-                      color: context.colors.primary.withValues(alpha: 0.1),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Text(
-                      item.icon,
-                      style: TextStyle(fontSize: 20.sp),
-                    ),
-                  ),
-                  SizedBox(width: 16.w),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          item.label,
-                          style: TextStyle(
-                            fontWeight: FontWeight.w700,
-                            fontSize: 14.sp,
-                            color: context.colors.primaryDark,
-                          ),
-                        ),
-                        SizedBox(height: 2.h),
-                        Text(
-                          item.time,
-                          style: TextStyle(
-                            fontSize: 12.sp,
-                            color: context.colors.muted,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Text(
-                    '+${item.ml} ml',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w800,
-                      fontSize: 13.sp,
-                      color: context.colors.primary,
-                    ),
-                  ),
-                ],
-              ),
-            );
-          }),
-      ],
+          ]
+        ],
+      ),
     );
   }
 }

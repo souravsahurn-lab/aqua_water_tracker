@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
 import '../providers/hydration_provider.dart';
 import '../widgets/bar_chart.dart';
-import '../widgets/spark_line.dart';
+
 import '../widgets/mini_bar.dart';
 import '../widgets/month_calendar.dart';
 import '../widgets/daily_log_inline.dart';
@@ -134,60 +134,61 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                     ] else ...[
                       // Bar chart card
                       _buildCard(context,
-                        child: Column(
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  period == 'day'
-                                      ? 'Hourly Intake'
-                                      : 'Weekly Intake',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.w700,
-                                    fontSize: 14.sp,
-                                    color: context.colors.primaryDark,
+                        child: Builder(builder: (context) {
+                          final barData = provider.getBarData(period);
+                          final total = barData.fold(0.0, (a, b) => a + b);
+                          final goal = provider.userData.goal.toDouble();
+
+                          // Dynamic labels & highlight from provider
+                          final labels = period == 'day'
+                              ? provider.getHourlyLabels()
+                              : _getWeekLabels();
+                          final highlightIdx = period == 'day'
+                              ? provider.getHourlyHighlightIndex()
+                              : 6; // today = last bar in week
+
+                          // Reference max: for day, show growth relative to a "standard" drink (e.g. 1/8th of goal)
+                          // if a drink exceeds this, the graph scales up.
+                          final refMax = period == 'day'
+                              ? (goal / 8).clamp(250.0, double.infinity)
+                              : goal;
+
+                          return Column(
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    period == 'day'
+                                        ? 'Hourly Intake'
+                                        : 'Weekly Intake',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 14.sp,
+                                      color: context.colors.primaryDark,
+                                    ),
                                   ),
-                                ),
-                                _buildTrendBadge(context, provider, period),
-                              ],
-                            ),
-                            SizedBox(height: 16.h),
-                            SimpleBarChart(
-                              data: provider.getBarData(period),
-                              labels: _getBarLabels(period),
-                            ),
-                            SizedBox(height: 16.h),
-                            _buildStatsSummary(context, provider, period),
-                          ],
-                        ),
+                                  _buildTrendBadge(context, provider, period),
+                                ],
+                              ),
+                              SizedBox(height: 16.h),
+                              SimpleBarChart(
+                                data: barData,
+                                labels: labels,
+                                highlightIndex: highlightIdx,
+                                totalLabel: 'Total: ${_formatTotalMl(total)}',
+                                referenceMax: refMax,
+                              ),
+                              SizedBox(height: 16.h),
+                              _buildStatsSummary(context, provider, period),
+                            ],
+                          );
+                        }),
                       ),
                       SizedBox(height: 16.h),
                     ],
 
-                    // Trend line card
-                    _buildCard(context,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Trend Line',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w700,
-                              fontSize: 14.sp,
-                              color: context.colors.primaryDark,
-                            ),
-                          ),
-                          SizedBox(height: 14.h),
-                          SparkLine(
-                            data: provider.getBarData(period),
-                            color: context.colors.primary,
-                            labels: _getSparklineLabels(period),
-                          ),
-                        ],
-                      ),
-                    ),
-                    SizedBox(height: 16.h),
+
 
                     // Drink breakdown card
                     _buildCard(context,
@@ -594,25 +595,21 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
     );
   }
 
-  List<String> _getBarLabels(String period) {
-    if (period == 'day') return ['6am', '9', '11', '1pm', '3', '5', '8'];
-    if (period == 'week') {
-      final now = DateTime.now();
-      final days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-      List<String> labels = [];
-      for (int i = 6; i >= 0; i--) {
-        final d = now.subtract(Duration(days: i));
-        labels.add(days[d.weekday - 1].substring(0, 1));
-      }
-      return labels;
+  List<String> _getWeekLabels() {
+    final now = DateTime.now();
+    final dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    List<String> labels = [];
+    for (int i = 6; i >= 0; i--) {
+      final d = now.subtract(Duration(days: i));
+      labels.add(dayNames[d.weekday - 1].substring(0, 1));
     }
-    return ['1', '', '2', '', '3', '', '4', '', '5', '', '6', '', ''];
+    return labels;
   }
 
-  List<String>? _getSparklineLabels(String period) {
-    if (period == 'day') return _getBarLabels('day');
-    if (period == 'week') return ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
-    if (period == 'month') return List.generate(30, (i) => (i % 5 == 0) ? '${i + 1}' : '');
-    return null;
+  String _formatTotalMl(double ml) {
+    if (ml >= 1000) return '${(ml / 1000).toStringAsFixed(1)}L';
+    return '${ml.round()} ml';
   }
+
+
 }
