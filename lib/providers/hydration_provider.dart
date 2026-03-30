@@ -97,6 +97,10 @@ class HydrationProvider extends ChangeNotifier {
       : 0;
   int get remaining => (_userData.goal - _userData.drunk).clamp(0, _userData.goal);
 
+  // ═══════════════════════════════════════════════════════════════════
+  // Daily Reset & Streak Logic
+  // ═══════════════════════════════════════════════════════════════════
+
   void _checkDailyReset() {
     final today = DateTime.now().toIso8601String().split('T')[0];
     if (_userData.lastActiveDate != today) {
@@ -106,7 +110,12 @@ class HydrationProvider extends ChangeNotifier {
         final diff = currentDate.difference(lastDate).inDays;
         
         if (diff == 1) {
-          if (_userData.drunk >= _userData.goal) {
+          // Yesterday: check if they met the goal yesterday
+          final yesterdayStr = lastDate.toIso8601String().split('T')[0];
+          final yesterdayIntake = _logs
+              .where((l) => l.date == yesterdayStr)
+              .fold(0, (sum, l) => sum + l.ml);
+          if (yesterdayIntake >= _userData.goal) {
             _userData.streak++;
           } else {
             _userData.streak = 0;
@@ -124,6 +133,14 @@ class HydrationProvider extends ChangeNotifier {
     }
   }
 
+  /// The effective streak to display: if they met today's goal, add 1 to the base streak
+  int get displayStreak {
+    if (_userData.drunk >= _userData.goal) {
+      return _userData.streak + 1;
+    }
+    return _userData.streak;
+  }
+
   String getGreeting() {
     final hour = DateTime.now().hour;
     if (hour < 12) return 'Good Morning,';
@@ -132,27 +149,119 @@ class HydrationProvider extends ChangeNotifier {
     return 'Good Night,';
   }
 
+  // ═══════════════════════════════════════════════════════════════════
+  // Goal Calculation
+  // ═══════════════════════════════════════════════════════════════════
+
+  void _recalculateGoalIfAuto() {
+    if (!_userData.customGoal) {
+      _userData.goal = UserData.calculateGoal(
+        weight: _userData.weight,
+        height: _userData.height,
+        activity: _userData.activity,
+        gender: _userData.gender,
+      );
+    }
+  }
+
+  /// Returns the recommended goal based on current profile
+  int get recommendedGoal => UserData.calculateGoal(
+    weight: _userData.weight,
+    height: _userData.height,
+    activity: _userData.activity,
+    gender: _userData.gender,
+  );
+
+  // ═══════════════════════════════════════════════════════════════════
+  // Reminders
+  // ═══════════════════════════════════════════════════════════════════
+
   void _updateReminders() {
     if (!_isInit || !_isSetupComplete) return;
 
     final wParts = _userData.wakeTime.split(':');
     final sParts = _userData.sleepTime.split(':');
 
+    final wakeTimeOfDay = TimeOfDay(
+      hour: int.tryParse(wParts[0]) ?? 7,
+      minute: int.tryParse(wParts.length > 1 ? wParts[1] : '0') ?? 0,
+    );
+    final sleepTimeOfDay = TimeOfDay(
+      hour: int.tryParse(sParts[0]) ?? 22,
+      minute: int.tryParse(sParts.length > 1 ? sParts[1] : '0') ?? 0,
+    );
+
+    // Always use customReminderTimes as the source of truth
+    // If empty, auto-generate them first
+    if (_userData.customReminderTimes.isEmpty) {
+      _regenerateSmartTimes();
+    }
+
+    final customTimes = _userData.customReminderTimes.map((t) {
+      final parts = t.split(':');
+      return TimeOfDay(
+        hour: int.tryParse(parts[0]) ?? 8,
+        minute: int.tryParse(parts.length > 1 ? parts[1] : '0') ?? 0,
+      );
+    }).toList();
+
     NotificationService().scheduleReminders(
-      wakeTime: TimeOfDay(
-        hour: int.tryParse(wParts[0]) ?? 7,
-        minute: int.tryParse(wParts.length > 1 ? wParts[1] : '0') ?? 0,
-      ),
-      sleepTime: TimeOfDay(
-        hour: int.tryParse(sParts[0]) ?? 22,
-        minute: int.tryParse(sParts.length > 1 ? sParts[1] : '0') ?? 0,
-      ),
+      wakeTime: wakeTimeOfDay,
+      sleepTime: sleepTimeOfDay,
       intervalMin: _userData.reminderIntervalMin,
       enabled: _userData.reminders,
       soundEnabled: _userData.sound,
       vibrationEnabled: _userData.vibration,
+      soundName: _userData.notificationSound,
+      customTimes: customTimes,
     );
   }
+
+  /// Auto-generate smart reminder times based on goal and schedule
+  void _regenerateSmartTimes() {
+    try {
+      final wParts = _userData.wakeTime.split(':');
+      final sParts = _userData.sleepTime.split(':');
+      final wakeH = int.parse(wParts[0]);
+      final wakeM = int.parse(wParts[1]);
+      final sleepH = int.parse(sParts[0]);
+      final sleepM = int.parse(sParts[1]);
+
+      final now = DateTime.now();
+      DateTime wake = DateTime(now.year, now.month, now.day, wakeH, wakeM);
+      DateTime sleep = DateTime(now.year, now.month, now.day, sleepH, sleepM);
+      if (sleep.isBefore(wake)) sleep = sleep.add(const Duration(days: 1));
+
+      int interval;
+      if (_userData.smartReminders) {
+        final numReminders = (_userData.goal / 250).ceil().clamp(4, 20);
+        final awakeMinutes = sleep.difference(wake).inMinutes;
+        interval = (awakeMinutes / numReminders).floor().clamp(30, 180);
+      } else {
+        interval = _userData.reminderIntervalMin;
+      }
+
+      List<String> times = [];
+      DateTime current = wake;
+      while (current.isBefore(sleep) && times.length < 30) {
+        times.add('${current.hour.toString().padLeft(2, '0')}:${current.minute.toString().padLeft(2, '0')}');
+        current = current.add(Duration(minutes: interval));
+      }
+      _userData.customReminderTimes = times;
+    } catch (_) {}
+  }
+
+  /// Public method: regenerate reminders from scratch (smart recalculate)
+  void regenerateSmartReminders() {
+    _regenerateSmartTimes();
+    _updateReminders();
+    _saveToPrefs();
+    notifyListeners();
+  }
+
+  // ═══════════════════════════════════════════════════════════════════
+  // Analytics Computed Data
+  // ═══════════════════════════════════════════════════════════════════
 
   List<double> getBarData(String period) {
     if (period == 'day') {
@@ -161,19 +270,19 @@ class HydrationProvider extends ChangeNotifier {
       for (var l in _logs.where((e) => e.date == today)) {
         try {
           final h = int.parse(l.time.split(':')[0]);
-          if (h >= 8 && h < 10) {
+          if (h >= 6 && h < 9) {
             data[0] += l.ml;
-          } else if (h >= 10 && h < 12) {
+          } else if (h >= 9 && h < 11) {
             data[1] += l.ml;
-          } else if (h >= 12 && h < 14) {
+          } else if (h >= 11 && h < 13) {
             data[2] += l.ml;
-          } else if (h >= 14 && h < 16) {
+          } else if (h >= 13 && h < 15) {
             data[3] += l.ml;
-          } else if (h >= 16 && h < 18) {
+          } else if (h >= 15 && h < 17) {
             data[4] += l.ml;
-          } else if (h >= 18 && h < 20) {
+          } else if (h >= 17 && h < 20) {
             data[5] += l.ml;
-          } else if (h >= 20) {
+          } else {
             data[6] += l.ml;
           }
         } catch (_) {}
@@ -200,6 +309,154 @@ class HydrationProvider extends ChangeNotifier {
     }
   }
 
+  /// Average daily intake for the given period
+  int getAverageIntake(String period) {
+    final data = getBarData(period);
+    final nonZero = data.where((d) => d > 0).toList();
+    if (nonZero.isEmpty) return 0;
+    return (nonZero.reduce((a, b) => a + b) / nonZero.length).round();
+  }
+
+  /// Best (highest) intake for the given period
+  int getBestIntake(String period) {
+    final data = getBarData(period);
+    if (data.isEmpty) return 0;
+    return data.reduce((a, b) => a > b ? a : b).round();
+  }
+
+  /// Goal hit count string like "5/7" for the period
+  String getGoalHitStr(String period) {
+    if (period == 'day') {
+      // For day view: how many time blocks had some intake
+      final data = getBarData(period);
+      final filled = data.where((d) => d > 0).length;
+      return '$filled/7';
+    } else if (period == 'week') {
+      final now = DateTime.now();
+      int hit = 0;
+      for (int i = 0; i < 7; i++) {
+        final d = now.subtract(Duration(days: 6 - i)).toIso8601String().split('T')[0];
+        final sum = _logs.where((l) => l.date == d).fold(0, (p, c) => p + c.ml);
+        if (sum >= _userData.goal) hit++;
+      }
+      return '$hit/7';
+    } else {
+      final now = DateTime.now();
+      int hit = 0;
+      int total = 0;
+      for (int i = 0; i < 30; i++) {
+        final d = now.subtract(Duration(days: 29 - i)).toIso8601String().split('T')[0];
+        final sum = _logs.where((l) => l.date == d).fold(0, (p, c) => p + c.ml);
+        if (sum > 0) total++;
+        if (sum >= _userData.goal) hit++;
+      }
+      return '$hit/${total > 0 ? total : 30}';
+    }
+  }
+
+  /// Calculate trend percentage: compare current period avg vs previous period avg
+  double getTrendPercentage(String period) {
+    final now = DateTime.now();
+    double currentAvg = 0;
+    double prevAvg = 0;
+
+    if (period == 'day') {
+      // Today vs yesterday
+      final today = now.toIso8601String().split('T')[0];
+      final yesterday = now.subtract(const Duration(days: 1)).toIso8601String().split('T')[0];
+      final todaySum = _logs.where((l) => l.date == today).fold(0, (p, c) => p + c.ml);
+      final yesterdaySum = _logs.where((l) => l.date == yesterday).fold(0, (p, c) => p + c.ml);
+      currentAvg = todaySum.toDouble();
+      prevAvg = yesterdaySum.toDouble();
+    } else if (period == 'week') {
+      // This week vs last week
+      for (int i = 0; i < 7; i++) {
+        final d = now.subtract(Duration(days: i)).toIso8601String().split('T')[0];
+        currentAvg += _logs.where((l) => l.date == d).fold(0, (p, c) => p + c.ml);
+        final pd = now.subtract(Duration(days: 7 + i)).toIso8601String().split('T')[0];
+        prevAvg += _logs.where((l) => l.date == pd).fold(0, (p, c) => p + c.ml);
+      }
+    } else {
+      // This month vs last month  
+      for (int i = 0; i < 30; i++) {
+        final d = now.subtract(Duration(days: i)).toIso8601String().split('T')[0];
+        currentAvg += _logs.where((l) => l.date == d).fold(0, (p, c) => p + c.ml);
+        final pd = now.subtract(Duration(days: 30 + i)).toIso8601String().split('T')[0];
+        prevAvg += _logs.where((l) => l.date == pd).fold(0, (p, c) => p + c.ml);
+      }
+    }
+
+    if (prevAvg == 0) return currentAvg > 0 ? 100.0 : 0.0;
+    return ((currentAvg - prevAvg) / prevAvg * 100).roundToDouble();
+  }
+
+  /// Hydration score (0-100) based on last 7 days
+  int get hydrationScore {
+    final now = DateTime.now();
+    int daysMetGoal = 0;
+    double totalCompletionPct = 0;
+
+    for (int i = 0; i < 7; i++) {
+      final d = now.subtract(Duration(days: i)).toIso8601String().split('T')[0];
+      final sum = _logs.where((l) => l.date == d).fold(0, (p, c) => p + c.ml);
+      final pctDay = _userData.goal > 0 ? (sum / _userData.goal * 100).clamp(0, 100) : 0;
+      totalCompletionPct += pctDay;
+      if (sum >= _userData.goal) daysMetGoal++;
+    }
+
+    // Consistency: what % of last 7 days goal was met (0-40 points)
+    final consistency = (daysMetGoal / 7 * 40).round();
+    // Average completion % (0-40 points)
+    final avgCompletion = (totalCompletionPct / 7 / 100 * 40).round();
+    // Streak bonus (0-20 points)  
+    final streakBonus = (_userData.streak.clamp(0, 10) * 2);
+
+    return (consistency + avgCompletion + streakBonus).clamp(0, 100);
+  }
+
+  /// Hydration score label
+  String get hydrationScoreLabel {
+    final score = hydrationScore;
+    if (score >= 85) return 'Excellent! 🌟';
+    if (score >= 70) return 'Great! 🎉';
+    if (score >= 50) return 'Good 👍';
+    if (score >= 30) return 'Needs work 💪';
+    return 'Keep going! 🚀';
+  }
+
+  /// Hydration score tip
+  String get hydrationScoreTip {
+    final score = hydrationScore;
+    if (score >= 85) return "You're consistently hitting your daily goal. Amazing dedication!";
+    if (score >= 70) return "You're doing great! Try to be more consistent to reach a perfect score.";
+    if (score >= 50) return "Good effort! Try hitting your goal more consistently for a higher score.";
+    if (score >= 30) return "You're building the habit. Set regular reminders to improve.";
+    return "Start logging your water intake daily. Every glass counts!";
+  }
+
+  /// Returns which of the last 7 days had goal met (Mon-Sun order)
+  List<bool> get weeklyGoalStatus {
+    final now = DateTime.now();
+    // Find the most recent Monday
+    final monday = now.subtract(Duration(days: now.weekday - 1));
+    
+    List<bool> status = [];
+    for (int i = 0; i < 7; i++) {
+      final d = DateTime(monday.year, monday.month, monday.day + i)
+          .toIso8601String()
+          .split('T')[0];
+      final sum = _logs.where((l) => l.date == d).fold(0, (p, c) => p + c.ml);
+      // For future days, mark as false
+      final dayDate = DateTime(monday.year, monday.month, monday.day + i);
+      if (dayDate.isAfter(now)) {
+        status.add(false);
+      } else {
+        status.add(sum >= _userData.goal);
+      }
+    }
+    return status;
+  }
+
   Map<String, int> get drinkTypeBreakdown {
     final today = DateTime.now().toIso8601String().split('T')[0];
     Map<String, int> breakdown = {
@@ -218,43 +475,66 @@ class HydrationProvider extends ChangeNotifier {
     return breakdown;
   }
 
+  // ═══════════════════════════════════════════════════════════════════
+  // Reminder Getters
+  // ═══════════════════════════════════════════════════════════════════
+
+  /// Always returns from customReminderTimes (source of truth)
+  List<TimeOfDay> get generatedReminders {
+    if (_userData.wakeTime.isEmpty || _userData.sleepTime.isEmpty) return [];
+
+    // If no times stored yet, generate them
+    if (_userData.customReminderTimes.isEmpty) {
+      _regenerateSmartTimes();
+      _saveToPrefs();
+    }
+
+    return _userData.customReminderTimes.map((t) {
+      final parts = t.split(':');
+      return TimeOfDay(
+        hour: int.tryParse(parts[0]) ?? 8,
+        minute: int.tryParse(parts.length > 1 ? parts[1] : '0') ?? 0,
+      );
+    }).toList()
+      ..sort((a, b) {
+        if (a.hour != b.hour) return a.hour.compareTo(b.hour);
+        return a.minute.compareTo(b.minute);
+      });
+  }
+
+  /// The effective interval in minutes (for display)
+  int get effectiveInterval {
+    if (_userData.smartReminders) {
+      try {
+        final wParts = _userData.wakeTime.split(':');
+        final sParts = _userData.sleepTime.split(':');
+        final now = DateTime.now();
+        DateTime wake = DateTime(now.year, now.month, now.day, int.parse(wParts[0]), int.parse(wParts[1]));
+        DateTime sleep = DateTime(now.year, now.month, now.day, int.parse(sParts[0]), int.parse(sParts[1]));
+        if (sleep.isBefore(wake)) sleep = sleep.add(const Duration(days: 1));
+        final numReminders = (_userData.goal / 250).ceil().clamp(4, 20);
+        return (sleep.difference(wake).inMinutes / numReminders).floor().clamp(30, 180);
+      } catch (_) {
+        return 60;
+      }
+    }
+    return _userData.reminderIntervalMin;
+  }
+
+  // ═══════════════════════════════════════════════════════════════════
+  // Actions
+  // ═══════════════════════════════════════════════════════════════════
+
   void updateReminderInterval(int mins) {
     _userData.reminderIntervalMin = mins;
+    // Regenerate times with new interval
+    _regenerateSmartTimes();
     _updateReminders();
     notifyListeners();
   }
 
-  List<TimeOfDay> get generatedReminders {
-    if (_userData.wakeTime.isEmpty || _userData.sleepTime.isEmpty) return [];
-    try {
-      final wParts = _userData.wakeTime.split(':');
-      final sParts = _userData.sleepTime.split(':');
-      final wakeH = int.parse(wParts[0]);
-      final wakeM = int.parse(wParts[1]);
-      final sleepH = int.parse(sParts[0]);
-      final sleepM = int.parse(sParts[1]);
-
-      final now = DateTime.now();
-      DateTime wake = DateTime(now.year, now.month, now.day, wakeH, wakeM);
-      DateTime sleep = DateTime(now.year, now.month, now.day, sleepH, sleepM);
-      if (sleep.isBefore(wake)) {
-        sleep = sleep.add(const Duration(days: 1));
-      }
-
-      List<TimeOfDay> res = [];
-      DateTime current = wake;
-      while (current.isBefore(sleep) && res.length < 30) {
-        res.add(TimeOfDay(hour: current.hour, minute: current.minute));
-        current = current.add(Duration(minutes: _userData.reminderIntervalMin));
-      }
-      return res;
-    } catch (e) {
-      return [];
-    }
-  }
-
   void drinkWater(int ml, {String label = 'Water', String icon = '💧'}) {
-    _userData.drunk = (_userData.drunk + ml).clamp(0, _userData.goal);
+    _userData.drunk += ml;
     final now = TimeOfDay.now();
     final timeStr =
         '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
@@ -272,7 +552,7 @@ class HydrationProvider extends ChangeNotifier {
   void undoDrink(int index) {
     if (index >= 0 && index < _logs.length) {
       final removed = _logs.removeAt(index);
-      _userData.drunk = (_userData.drunk - removed.ml).clamp(0, _userData.goal);
+      _userData.drunk = (_userData.drunk - removed.ml).clamp(0, 99999);
       notifyListeners();
     }
   }
@@ -285,19 +565,21 @@ class HydrationProvider extends ChangeNotifier {
 
   void updateGender(String gender) {
     _userData.gender = gender;
+    _recalculateGoalIfAuto();
     _saveToPrefs();
     notifyListeners();
   }
 
   void updateWeight(int weight) {
     _userData.weight = weight;
-    _userData.goal = weight * 35; // Default formula: 35ml per kg of body weight
+    _recalculateGoalIfAuto();
     _saveToPrefs();
     notifyListeners();
   }
 
   void updateHeight(int height) {
     _userData.height = height;
+    _recalculateGoalIfAuto();
     _saveToPrefs();
     notifyListeners();
   }
@@ -310,6 +592,7 @@ class HydrationProvider extends ChangeNotifier {
 
   void updateActivity(String activity) {
     _userData.activity = activity;
+    _recalculateGoalIfAuto();
     _saveToPrefs();
     notifyListeners();
   }
@@ -330,6 +613,16 @@ class HydrationProvider extends ChangeNotifier {
 
   void updateGoal(int goal) {
     _userData.goal = goal;
+    _userData.customGoal = true;
+    _updateReminders(); // smart reminders depend on goal
+    _saveToPrefs();
+    notifyListeners();
+  }
+
+  void resetGoalToRecommended() {
+    _userData.customGoal = false;
+    _recalculateGoalIfAuto();
+    _updateReminders();
     _saveToPrefs();
     notifyListeners();
   }
@@ -361,6 +654,70 @@ class HydrationProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  void toggleSmartReminders(bool val) {
+    _userData.smartReminders = val;
+    // Always regenerate times when toggling smart mode
+    _regenerateSmartTimes();
+    _updateReminders();
+    _saveToPrefs();
+    notifyListeners();
+  }
+
+  void updateNotificationSound(String sound) {
+    _userData.notificationSound = sound;
+    _updateReminders();
+    _saveToPrefs();
+    notifyListeners();
+  }
+
+  // ═══════════════════════════════════════════════════════════════════
+  // Custom Reminder Management (for manual mode)
+  // ═══════════════════════════════════════════════════════════════════
+
+  void addCustomReminder(TimeOfDay time) {
+    final timeStr = '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
+    if (!_userData.customReminderTimes.contains(timeStr)) {
+      _userData.customReminderTimes.add(timeStr);
+      _userData.customReminderTimes.sort();
+      _updateReminders();
+      notifyListeners();
+    }
+  }
+
+  void removeCustomReminder(int index) {
+    if (index >= 0 && index < _userData.customReminderTimes.length) {
+      _userData.customReminderTimes.removeAt(index);
+      _updateReminders();
+      notifyListeners();
+    }
+  }
+
+  void updateCustomReminder(int index, TimeOfDay time) {
+    if (index >= 0 && index < _userData.customReminderTimes.length) {
+      _userData.customReminderTimes[index] =
+          '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
+      _userData.customReminderTimes.sort();
+      _updateReminders();
+      notifyListeners();
+    }
+  }
+
+  /// Initialize custom reminders from the auto-generated ones (when switching to manual)
+  void initCustomRemindersFromAuto() {
+    if (_userData.customReminderTimes.isEmpty) {
+      // Copy current auto-generated reminders as starting point
+      final autoReminders = generatedReminders;
+      _userData.customReminderTimes = autoReminders.map((t) {
+        return '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
+      }).toList();
+      _saveToPrefs();
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════════════
+  // Setup
+  // ═══════════════════════════════════════════════════════════════════
+
   void setSetupStep(int step) {
     _setupStep = step;
     notifyListeners();
@@ -376,6 +733,8 @@ class HydrationProvider extends ChangeNotifier {
   void completeSetup() {
     if (isStepValid) {
       _isSetupComplete = true;
+      // Calculate goal based on profile
+      _recalculateGoalIfAuto();
       _updateReminders();
       notifyListeners();
     }
@@ -415,5 +774,33 @@ class HydrationProvider extends ChangeNotifier {
     _statPeriod = 'week';
     _isInit = true;
     notifyListeners();
+  }
+
+  /// Today's logs only
+  List<DrinkLog> get todayLogs {
+    final today = DateTime.now().toIso8601String().split('T')[0];
+    return _logs.where((l) => l.date == today).toList();
+  }
+
+  /// Export data as formatted string
+  String exportDataAsText() {
+    final buffer = StringBuffer();
+    buffer.writeln('Aqua Water Tracker — Data Export');
+    buffer.writeln('Generated: ${DateTime.now().toString().split('.')[0]}');
+    buffer.writeln('');
+    buffer.writeln('Profile:');
+    buffer.writeln('  Name: ${_userData.name}');
+    buffer.writeln('  Weight: ${_userData.weight} kg');
+    buffer.writeln('  Height: ${_userData.height} cm');
+    buffer.writeln('  Activity: ${_userData.activity}');
+    buffer.writeln('  Daily Goal: ${_userData.goal} ml');
+    buffer.writeln('  Streak: ${_userData.streak} days');
+    buffer.writeln('');
+    buffer.writeln('Drink Log (last 30 entries):');
+    final recent = _logs.take(30);
+    for (var log in recent) {
+      buffer.writeln('  ${log.date} ${log.time} — ${log.label}: ${log.ml} ml');
+    }
+    return buffer.toString();
   }
 }

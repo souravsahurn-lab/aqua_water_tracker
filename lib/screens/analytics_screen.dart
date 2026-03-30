@@ -6,10 +6,19 @@ import '../providers/hydration_provider.dart';
 import '../widgets/bar_chart.dart';
 import '../widgets/spark_line.dart';
 import '../widgets/mini_bar.dart';
+import '../widgets/month_calendar.dart';
+import '../widgets/daily_log_inline.dart';
 import 'package:flutter/services.dart';
 
-class AnalyticsScreen extends StatelessWidget {
+class AnalyticsScreen extends StatefulWidget {
   const AnalyticsScreen({super.key});
+
+  @override
+  State<AnalyticsScreen> createState() => _AnalyticsScreenState();
+}
+
+class _AnalyticsScreenState extends State<AnalyticsScreen> {
+  DateTime _selectedDate = DateTime.now();
 
   @override
   Widget build(BuildContext context) {
@@ -105,62 +114,56 @@ class AnalyticsScreen extends StatelessWidget {
                 padding: EdgeInsets.fromLTRB(24, 0, 24, 110.h + MediaQuery.of(context).padding.bottom),
                 child: Column(
                   children: [
-                    // Bar chart card
-                    _buildCard(context,
-                      child: Column(
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                period == 'day'
-                                    ? 'Hourly Intake'
-                                    : period == 'week'
-                                        ? 'Weekly Intake'
-                                        : 'Monthly Intake',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 14.sp,
-                                  color: context.colors.primaryDark,
-                                ),
-                              ),
-                              Container(
-                                padding: EdgeInsets.symmetric(
-                                    horizontal: 10.w, vertical: 4.h),
-                                decoration: BoxDecoration(
-                                  color: context.colors.success.withValues(alpha: 0.09),
-                                  borderRadius: BorderRadius.circular(8.r),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(Icons.trending_up,
-                                        size: 11, color: context.colors.success),
-                                    SizedBox(width: 4.w),
-                                    Text(
-                                      '+18%',
-                                      style: TextStyle(
-                                        fontSize: 11.sp,
-                                        fontWeight: FontWeight.w700,
-                                        color: context.colors.success,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                          SizedBox(height: 16.h),
-                          SimpleBarChart(
-                            data: provider.getBarData(period),
-                            labels: _getBarLabels(period),
-                          ),
-                          SizedBox(height: 16.h),
-                          _buildStatsSummary(context, period),
-                        ],
+                    if (period == 'month') ...[
+                      // Month Calendar
+                      _buildCard(context,
+                        child: MonthCalendar(
+                          selectedDate: _selectedDate,
+                          onDateSelected: (date) {
+                            setState(() {
+                              _selectedDate = date;
+                            });
+                          },
+                        ),
                       ),
-                    ),
-                    SizedBox(height: 16.h),
+                      SizedBox(height: 16.h),
+
+                      // Daily log inline view IF period == 'month'
+                      DailyLogInline(date: _selectedDate),
+                      SizedBox(height: 16.h),
+                    ] else ...[
+                      // Bar chart card
+                      _buildCard(context,
+                        child: Column(
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  period == 'day'
+                                      ? 'Hourly Intake'
+                                      : 'Weekly Intake',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 14.sp,
+                                    color: context.colors.primaryDark,
+                                  ),
+                                ),
+                                _buildTrendBadge(context, provider, period),
+                              ],
+                            ),
+                            SizedBox(height: 16.h),
+                            SimpleBarChart(
+                              data: provider.getBarData(period),
+                              labels: _getBarLabels(period),
+                            ),
+                            SizedBox(height: 16.h),
+                            _buildStatsSummary(context, provider, period),
+                          ],
+                        ),
+                      ),
+                      SizedBox(height: 16.h),
+                    ],
 
                     // Trend line card
                     _buildCard(context,
@@ -179,6 +182,7 @@ class AnalyticsScreen extends StatelessWidget {
                           SparkLine(
                             data: provider.getBarData(period),
                             color: context.colors.primary,
+                            labels: _getSparklineLabels(period),
                           ),
                         ],
                       ),
@@ -210,25 +214,25 @@ class AnalyticsScreen extends StatelessWidget {
                                     max: max.toDouble(),
                                     color: context.colors.primary,
                                     label: 'Water',
-                                    sub: total > 0 ? '${(map['Water']! / total * 100).round()}%' : '0%'),
+                                    sub: total > 0 ? '${map['Water']} ml (${(map['Water']! / total * 100).round()}%)' : '0 ml'),
                                 MiniBar(
                                     val: map['Tea / Coffee']!.toDouble(),
                                     max: max.toDouble(),
                                     color: context.colors.accent,
                                     label: 'Tea / Coffee',
-                                    sub: total > 0 ? '${(map['Tea / Coffee']! / total * 100).round()}%' : '0%'),
+                                    sub: total > 0 ? '${map['Tea / Coffee']} ml (${(map['Tea / Coffee']! / total * 100).round()}%)' : '0 ml'),
                                 MiniBar(
                                     val: map['Juice']!.toDouble(),
                                     max: max.toDouble(),
                                     color: context.colors.warning,
                                     label: 'Juice',
-                                    sub: total > 0 ? '${(map['Juice']! / total * 100).round()}%' : '0%'),
+                                    sub: total > 0 ? '${map['Juice']} ml (${(map['Juice']! / total * 100).round()}%)' : '0 ml'),
                                 MiniBar(
                                     val: map['Sports drinks']!.toDouble(),
                                     max: max.toDouble(),
                                     color: context.colors.danger,
                                     label: 'Sports drinks',
-                                    sub: total > 0 ? '${(map['Sports drinks']! / total * 100).round()}%' : '0%'),
+                                    sub: total > 0 ? '${map['Sports drinks']} ml (${(map['Sports drinks']! / total * 100).round()}%)' : '0 ml'),
                               ],
                             );
                           }),
@@ -242,7 +246,7 @@ class AnalyticsScreen extends StatelessWidget {
                     SizedBox(height: 16.h),
 
                     // Hydration score card
-                    _buildScoreCard(context),
+                    _buildScoreCard(context, provider),
                   ],
                 ),
               ),
@@ -273,24 +277,74 @@ class AnalyticsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildStatsSummary(BuildContext context, String period) {
-    final stats = period == 'day'
-        ? [
-            ['💧', '285 ml', 'Avg'],
-            ['🏆', '400 ml', 'Best'],
-            ['🎯', '—', 'Goal']
-          ]
-        : period == 'week'
-            ? [
-                ['💧', '2,048 ml', 'Avg'],
-                ['🏆', '2,600 ml', 'Best'],
-                ['🎯', '5/7', 'Hit']
-              ]
-            : [
-                ['💧', '2,320 ml', 'Avg'],
-                ['🏆', '2,800 ml', 'Best'],
-                ['🎯', '22/30', 'Hit']
-              ];
+  Widget _buildTrendBadge(BuildContext context, HydrationProvider provider, String period) {
+    final trend = provider.getTrendPercentage(period);
+    final isPositive = trend >= 0;
+    final hasData = trend != 0;
+
+    if (!hasData) {
+      return Container(
+        padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
+        decoration: BoxDecoration(
+          color: context.colors.softLight,
+          borderRadius: BorderRadius.circular(8.r),
+        ),
+        child: Text(
+          'No prev data',
+          style: TextStyle(
+            fontSize: 11.sp,
+            fontWeight: FontWeight.w600,
+            color: context.colors.mutedLight,
+          ),
+        ),
+      );
+    }
+
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
+      decoration: BoxDecoration(
+        color: isPositive
+            ? context.colors.success.withValues(alpha: 0.09)
+            : context.colors.danger.withValues(alpha: 0.09),
+        borderRadius: BorderRadius.circular(8.r),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            isPositive ? Icons.trending_up : Icons.trending_down,
+            size: 11,
+            color: isPositive ? context.colors.success : context.colors.danger,
+          ),
+          SizedBox(width: 4.w),
+          Text(
+            '${isPositive ? '+' : ''}${trend.toStringAsFixed(0)}%',
+            style: TextStyle(
+              fontSize: 11.sp,
+              fontWeight: FontWeight.w700,
+              color: isPositive ? context.colors.success : context.colors.danger,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatsSummary(BuildContext context, HydrationProvider provider, String period) {
+    final avg = provider.getAverageIntake(period);
+    final best = provider.getBestIntake(period);
+    final goalHit = provider.getGoalHitStr(period);
+
+    String formatMl(int ml) {
+      if (ml >= 1000) return '${(ml / 1000).toStringAsFixed(1)}L';
+      return '$ml ml';
+    }
+
+    final stats = [
+      ['💧', formatMl(avg), 'Avg'],
+      ['🏆', formatMl(best), 'Best'],
+      ['🎯', goalHit, period == 'day' ? 'Active' : 'Hit'],
+    ];
 
     return Row(
       children: stats.map((s) {
@@ -327,6 +381,21 @@ class AnalyticsScreen extends StatelessWidget {
   }
 
   Widget _buildStreakCard(BuildContext context, HydrationProvider provider) {
+    final weekStatus = provider.weeklyGoalStatus;
+    final days = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+    final displayStreak = provider.displayStreak;
+
+    String streakMessage;
+    if (displayStreak == 0) {
+      streakMessage = "Start your streak! Hit today's goal.";
+    } else if (displayStreak == 1) {
+      streakMessage = "Great start! Keep going tomorrow.";
+    } else if (displayStreak < 7) {
+      streakMessage = "You're on a roll. Keep it up!";
+    } else {
+      streakMessage = "Incredible consistency! 🌟";
+    }
+
     return Container(
       width: double.infinity,
       padding: EdgeInsets.all(16.w),
@@ -365,7 +434,7 @@ class AnalyticsScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '${provider.userData.streak} Day Streak!',
+                  '$displayStreak Day Streak${displayStreak > 0 ? '!' : ''}',
                   style: TextStyle(
                     fontSize: 22.sp,
                     fontWeight: FontWeight.w800,
@@ -373,23 +442,40 @@ class AnalyticsScreen extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  "You're on a roll. Keep it up!",
+                  streakMessage,
                   style: TextStyle(fontSize: 12.sp, color: context.colors.mutedLight),
                 ),
                 SizedBox(height: 8.h),
                 Row(
-                  children: ['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((d) {
+                  children: List.generate(7, (i) {
+                    final met = weekStatus[i];
                     return Container(
                       width: 26.w,
                       height: 26.h,
                       margin: EdgeInsets.only(right: 5.w),
                       decoration: BoxDecoration(
-                        gradient: context.colors.primaryGradient,
+                        gradient: met ? context.colors.primaryGradient : null,
+                        color: met ? null : context.colors.softLight,
                         borderRadius: BorderRadius.circular(8.r),
+                        border: !met ? Border.all(
+                          color: context.colors.muted.withValues(alpha: 0.2),
+                          width: 1,
+                        ) : null,
                       ),
-                      child: Icon(Icons.check, size: 11, color: Colors.white),
+                      child: Center(
+                        child: met
+                            ? Icon(Icons.check, size: 11, color: Colors.white)
+                            : Text(
+                                days[i],
+                                style: TextStyle(
+                                  fontSize: 9.sp,
+                                  fontWeight: FontWeight.w600,
+                                  color: context.colors.mutedLight,
+                                ),
+                              ),
+                      ),
                     );
-                  }).toList(),
+                  }),
                 ),
               ],
             ),
@@ -399,7 +485,22 @@ class AnalyticsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildScoreCard(BuildContext context) {
+  Widget _buildScoreCard(BuildContext context, HydrationProvider provider) {
+    final score = provider.hydrationScore;
+    final label = provider.hydrationScoreLabel;
+    final tip = provider.hydrationScoreTip;
+
+    Color scoreColor;
+    if (score >= 70) {
+      scoreColor = context.colors.success;
+    } else if (score >= 50) {
+      scoreColor = context.colors.primary;
+    } else if (score >= 30) {
+      scoreColor = context.colors.warning;
+    } else {
+      scoreColor = context.colors.danger;
+    }
+
     return _buildCard(context,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -418,12 +519,12 @@ class AnalyticsScreen extends StatelessWidget {
               Column(
                 children: [
                   Text(
-                    '84',
+                    '$score',
                     style: TextStyle(
                       fontSize: 52.sp,
                       fontWeight: FontWeight.w800,
-                      color: context.colors.primary,
-                      height: 1.h,
+                      color: scoreColor,
+                      height: 1,
                     ),
                   ),
                   Text(
@@ -438,7 +539,7 @@ class AnalyticsScreen extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Great! 🎉',
+                      label,
                       style: TextStyle(
                         fontSize: 13.sp,
                         fontWeight: FontWeight.w600,
@@ -447,14 +548,43 @@ class AnalyticsScreen extends StatelessWidget {
                     ),
                     SizedBox(height: 6.h),
                     Text(
-                      "You're consistently hitting 80%+ of your daily goal. Aim for 2,500ml to reach 100.",
+                      tip,
                       style: TextStyle(
                         fontSize: 12.sp,
                         color: context.colors.mutedLight,
-                        height: 1.5.h,
+                        height: 1.5,
                       ),
                     ),
                   ],
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 14.h),
+          // Score breakdown bar
+          ClipRRect(
+            borderRadius: BorderRadius.circular(6.r),
+            child: LinearProgressIndicator(
+              value: score / 100,
+              minHeight: 6.h,
+              backgroundColor: context.colors.softLight,
+              valueColor: AlwaysStoppedAnimation(scoreColor),
+            ),
+          ),
+          SizedBox(height: 8.h),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Consistency + completion + streak',
+                style: TextStyle(fontSize: 10.sp, color: context.colors.mutedLight),
+              ),
+              Text(
+                '$score/100',
+                style: TextStyle(
+                  fontSize: 10.sp,
+                  fontWeight: FontWeight.w700,
+                  color: scoreColor,
                 ),
               ),
             ],
@@ -465,8 +595,24 @@ class AnalyticsScreen extends StatelessWidget {
   }
 
   List<String> _getBarLabels(String period) {
-    if (period == 'day') return ['8am', '10', '12', '2pm', '4', '6', '8'];
-    if (period == 'week') return ['1', '2', '3', '4', '5', '6', '7'];
+    if (period == 'day') return ['6am', '9', '11', '1pm', '3', '5', '8'];
+    if (period == 'week') {
+      final now = DateTime.now();
+      final days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+      List<String> labels = [];
+      for (int i = 6; i >= 0; i--) {
+        final d = now.subtract(Duration(days: i));
+        labels.add(days[d.weekday - 1].substring(0, 1));
+      }
+      return labels;
+    }
     return ['1', '', '2', '', '3', '', '4', '', '5', '', '6', '', ''];
+  }
+
+  List<String>? _getSparklineLabels(String period) {
+    if (period == 'day') return _getBarLabels('day');
+    if (period == 'week') return ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+    if (period == 'month') return List.generate(30, (i) => (i % 5 == 0) ? '${i + 1}' : '');
+    return null;
   }
 }

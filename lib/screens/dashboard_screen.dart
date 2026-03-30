@@ -5,6 +5,7 @@ import '../theme/app_theme.dart';
 import '../providers/hydration_provider.dart';
 import '../widgets/water_bottle.dart';
 import '../widgets/top_snackbar.dart';
+import '../widgets/live_permission_warning.dart';
 import 'package:flutter/services.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -33,6 +34,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
+  void _showEditGoalSheet(HydrationProvider provider) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => _EditGoalBottomSheet(provider: provider),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Consumer<HydrationProvider>(
@@ -40,7 +50,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         final pct = provider.pct;
         final remaining = provider.remaining;
         final userData = provider.userData;
-        final logs = provider.logs;
+        final logs = provider.todayLogs;
 
         return Stack(
           children: [
@@ -77,6 +87,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 letterSpacing: -0.5,
                               ),
                             ),
+                            const LivePermissionWarning(),
                           ],
                         ),
                         Row(
@@ -106,7 +117,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   Text('🔥', style: TextStyle(fontSize: 14.sp)),
                                   SizedBox(width: 4.w),
                                   Text(
-                                    '${userData.streak}',
+                                    '${provider.displayStreak}',
                                     style: TextStyle(
                                       fontSize: 14.sp,
                                       fontWeight: FontWeight.w800,
@@ -114,31 +125,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                     ),
                                   ),
                                 ],
-                              ),
-                            ),
-                            SizedBox(width: 12.w),
-                            Container(
-                              width: 44.w,
-                              height: 44.h,
-                              decoration: BoxDecoration(
-                                color: context.colors.card,
-                                shape: BoxShape.circle,
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: context.colors.primary.withValues(alpha: 0.08),
-                                    blurRadius: 16,
-                                    offset: const Offset(0, 4),
-                                  ),
-                                ],
-                                border: Border.all(
-                                  color: context.colors.softLight,
-                                  width: 1.w,
-                                ),
-                              ),
-                              child: Icon(
-                                Icons.person_rounded,
-                                color: context.colors.primary,
-                                size: 22.sp,
                               ),
                             ),
                           ],
@@ -151,6 +137,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   Expanded(
                     child: _buildBottleHero(provider, pct, remaining, userData),
                   ),
+
+                  // ─── Pro Mockup Card ─────────────────────────────
+                  _buildProCard(context),
 
                   // ─── Today's Log Inline Card ─────────────────────
                   Padding(
@@ -202,7 +191,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
           SizedBox(height: 6.h),
 
-          // Big number
+          // Big number + tappable goal
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.baseline,
@@ -219,12 +208,29 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
               ),
               SizedBox(width: 4.w),
-              Text(
-                '/ ${userData.goal} ml',
-                style: TextStyle(
-                  fontSize: 15.sp,
-                  fontWeight: FontWeight.w600,
-                  color: context.colors.mutedLight,
+              GestureDetector(
+                onTap: () {
+                  HapticFeedback.lightImpact();
+                  _showEditGoalSheet(provider);
+                },
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      '/ ${userData.goal} ml',
+                      style: TextStyle(
+                        fontSize: 15.sp,
+                        fontWeight: FontWeight.w600,
+                        color: context.colors.mutedLight,
+                      ),
+                    ),
+                    SizedBox(width: 4.w),
+                    Icon(
+                      Icons.edit_rounded,
+                      size: 13.sp,
+                      color: context.colors.mutedLight,
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -413,6 +419,76 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   // ═══════════════════════════════════════════════════════════════════
+  // Pro Mockup Card (Slim Professional Widget Promo)
+  // ═══════════════════════════════════════════════════════════════════
+  Widget _buildProCard(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 8.h),
+      child: Container(
+        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              context.colors.warning.withValues(alpha: 0.15),
+              context.colors.warning.withValues(alpha: 0.05),
+            ],
+          ),
+          borderRadius: BorderRadius.circular(16.r),
+          border: Border.all(
+            color: context.colors.warning.withValues(alpha: 0.3),
+            width: 1.w,
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: EdgeInsets.all(8.w),
+              decoration: BoxDecoration(
+                color: context.colors.warning.withValues(alpha: 0.2),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.star_rounded,
+                color: context.colors.warning,
+                size: 18.sp,
+              ),
+            ),
+            SizedBox(width: 12.w),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Get Pro Widgets Unlocked',
+                    style: TextStyle(
+                      fontSize: 12.sp,
+                      fontWeight: FontWeight.w800,
+                      color: context.colors.warning,
+                    ),
+                  ),
+                  SizedBox(height: 2.h),
+                  Text(
+                    'Just at \$35 + Tax',
+                    style: TextStyle(
+                      fontSize: 10.sp,
+                      color: context.colors.mutedLight,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.chevron_right_rounded,
+              color: context.colors.warning,
+              size: 20.sp,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════════════
   // Quick Actions — compact row above nav
   // ═══════════════════════════════════════════════════════════════════
   Widget _buildQuickActions(HydrationProvider provider) {
@@ -520,6 +596,287 @@ class _DashboardScreenState extends State<DashboardScreen> {
 }
 
 // ═════════════════════════════════════════════════════════════════════
+// Edit Goal Bottom Sheet
+// ═════════════════════════════════════════════════════════════════════
+class _EditGoalBottomSheet extends StatefulWidget {
+  final HydrationProvider provider;
+  const _EditGoalBottomSheet({required this.provider});
+
+  @override
+  State<_EditGoalBottomSheet> createState() => _EditGoalBottomSheetState();
+}
+
+class _EditGoalBottomSheetState extends State<_EditGoalBottomSheet> {
+  late TextEditingController _goalController;
+  bool _isCustom = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _goalController = TextEditingController(text: '${widget.provider.userData.goal}');
+    _isCustom = widget.provider.userData.customGoal;
+  }
+
+  @override
+  void dispose() {
+    _goalController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final recommended = widget.provider.recommendedGoal;
+    final userData = widget.provider.userData;
+
+    return Container(
+      padding: EdgeInsets.fromLTRB(
+        24.w, 20.h, 24.w,
+        MediaQuery.of(context).viewInsets.bottom + 30.h,
+      ),
+      decoration: BoxDecoration(
+        color: context.colors.card,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(32.r)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Handle
+          Center(
+            child: Container(
+              width: 40.w,
+              height: 4.h,
+              decoration: BoxDecoration(
+                color: context.colors.softLight,
+                borderRadius: BorderRadius.circular(10.r),
+              ),
+            ),
+          ),
+          SizedBox(height: 24.h),
+
+          Text(
+            'Edit Daily Goal',
+            style: TextStyle(
+              fontSize: 20.sp,
+              fontWeight: FontWeight.w800,
+              color: context.colors.primaryDark,
+            ),
+          ),
+          SizedBox(height: 8.h),
+
+          // Recommended goal explanation
+          Container(
+            padding: EdgeInsets.all(14.w),
+            decoration: BoxDecoration(
+              color: context.colors.primary.withValues(alpha: 0.06),
+              borderRadius: BorderRadius.circular(14.r),
+              border: Border.all(
+                color: context.colors.primary.withValues(alpha: 0.12),
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.auto_awesome_rounded, size: 20.sp, color: context.colors.primary),
+                SizedBox(width: 10.w),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Recommended: $recommended ml',
+                        style: TextStyle(
+                          fontSize: 13.sp,
+                          fontWeight: FontWeight.w700,
+                          color: context.colors.primary,
+                        ),
+                      ),
+                      SizedBox(height: 2.h),
+                      Text(
+                        'Based on ${userData.weight}kg, ${userData.height}cm, ${userData.activity} activity, ${userData.gender}',
+                        style: TextStyle(
+                          fontSize: 11.sp,
+                          color: context.colors.mutedLight,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          SizedBox(height: 20.h),
+
+          // Goal input
+          TextField(
+            controller: _goalController,
+            keyboardType: TextInputType.number,
+            style: TextStyle(
+              fontSize: 18.sp,
+              fontWeight: FontWeight.w700,
+              color: context.colors.primaryDark,
+            ),
+            decoration: InputDecoration(
+              labelText: 'Daily Goal (ml)',
+              labelStyle: TextStyle(color: context.colors.mutedLight, fontSize: 13.sp),
+              suffixText: 'ml',
+              suffixStyle: TextStyle(
+                fontSize: 14.sp,
+                fontWeight: FontWeight.w600,
+                color: context.colors.mutedLight,
+              ),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16.r),
+                borderSide: BorderSide(color: context.colors.softLight),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16.r),
+                borderSide: BorderSide(color: context.colors.softLight),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16.r),
+                borderSide: BorderSide(color: context.colors.primary, width: 2),
+              ),
+            ),
+            onChanged: (val) {
+              setState(() { _isCustom = true; });
+            },
+          ),
+          SizedBox(height: 16.h),
+
+          // Quick presets
+          Text(
+            'QUICK SET',
+            style: TextStyle(
+              fontSize: 10.sp,
+              fontWeight: FontWeight.w700,
+              color: context.colors.mutedLight,
+              letterSpacing: 1.2,
+            ),
+          ),
+          SizedBox(height: 8.h),
+          Wrap(
+            spacing: 8.w,
+            runSpacing: 8.h,
+            children: [1500, 2000, 2500, 3000, 3500, 4000].map((ml) {
+              final isSelected = _goalController.text == '$ml';
+              return GestureDetector(
+                onTap: () {
+                  HapticFeedback.lightImpact();
+                  setState(() {
+                    _goalController.text = '$ml';
+                    _isCustom = true;
+                  });
+                },
+                child: Container(
+                  padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+                  decoration: BoxDecoration(
+                    color: isSelected
+                        ? context.colors.primary.withValues(alpha: 0.12)
+                        : context.colors.softLight,
+                    borderRadius: BorderRadius.circular(10.r),
+                    border: Border.all(
+                      color: isSelected
+                          ? context.colors.primary
+                          : context.colors.softLight,
+                    ),
+                  ),
+                  child: Text(
+                    '$ml ml',
+                    style: TextStyle(
+                      fontSize: 12.sp,
+                      fontWeight: FontWeight.w600,
+                      color: isSelected
+                          ? context.colors.primary
+                          : context.colors.text,
+                    ),
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+          SizedBox(height: 20.h),
+
+          // Actions
+          Row(
+            children: [
+              // Reset to recommended
+              if (_isCustom || userData.customGoal)
+                Expanded(
+                  child: SizedBox(
+                    height: 50.h,
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        HapticFeedback.lightImpact();
+                        widget.provider.resetGoalToRecommended();
+                        Navigator.pop(context);
+                        TopSnackBar.show(
+                          context,
+                          message: 'Goal reset to recommended: $recommended ml',
+                          type: TopSnackBarType.info,
+                        );
+                      },
+                      icon: Icon(Icons.refresh_rounded, size: 18.sp),
+                      label: Text('Reset', style: TextStyle(fontSize: 13.sp, fontWeight: FontWeight.w600)),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: context.colors.primary,
+                        side: BorderSide(color: context.colors.primary.withValues(alpha: 0.3)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14.r),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              if (_isCustom || userData.customGoal) SizedBox(width: 12.w),
+
+              // Save
+              Expanded(
+                child: SizedBox(
+                  height: 50.h,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      final goal = int.tryParse(_goalController.text);
+                      if (goal == null || goal < 500) {
+                        TopSnackBar.show(
+                          context,
+                          message: 'Please enter a valid goal (min 500ml)',
+                          type: TopSnackBarType.error,
+                        );
+                        return;
+                      }
+                      HapticFeedback.lightImpact();
+                      widget.provider.updateGoal(goal);
+                      Navigator.pop(context);
+                      TopSnackBar.show(
+                        context,
+                        message: 'Daily goal updated to $goal ml 🎯',
+                        type: TopSnackBarType.success,
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: context.colors.primary,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14.r),
+                      ),
+                      elevation: 0,
+                    ),
+                    child: Text(
+                      'Save Goal',
+                      style: TextStyle(fontSize: 15.sp, fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ═════════════════════════════════════════════════════════════════════
 // Logs Bottom Sheet — shown when tapping "Today's Log" card
 // ═════════════════════════════════════════════════════════════════════
 class _LogsBottomSheet extends StatelessWidget {
@@ -532,7 +889,7 @@ class _LogsBottomSheet extends StatelessWidget {
       value: provider,
       child: Consumer<HydrationProvider>(
         builder: (context, provider, _) {
-          final logs = provider.logs;
+          final logs = provider.todayLogs;
           final maxHeight = MediaQuery.of(context).size.height * 0.65;
 
           return Container(
@@ -621,6 +978,8 @@ class _LogsBottomSheet extends StatelessWidget {
                       itemCount: logs.length,
                       itemBuilder: (context, idx) {
                         final log = logs[idx];
+                        // Find actual index in full logs list
+                        final actualIdx = provider.logs.indexOf(log);
                         return Container(
                           margin: EdgeInsets.only(bottom: 8.h),
                           padding: EdgeInsets.symmetric(
@@ -706,7 +1065,7 @@ class _LogsBottomSheet extends StatelessWidget {
                                 child: InkWell(
                                   onTap: () {
                                     HapticFeedback.lightImpact();
-                                    provider.undoDrink(idx);
+                                    provider.undoDrink(actualIdx >= 0 ? actualIdx : idx);
                                     TopSnackBar.show(
                                       context,
                                       message: 'Log removed',

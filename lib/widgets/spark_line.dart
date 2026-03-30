@@ -4,16 +4,22 @@ import 'package:flutter/material.dart';
 class SparkLine extends StatelessWidget {
   final List<double> data;
   final Color color;
+  final List<String>? labels;
 
-  const SparkLine({super.key, required this.data, required this.color});
+  const SparkLine({
+    super.key, 
+    required this.data, 
+    required this.color,
+    this.labels,
+  });
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 60.h,
+      height: labels != null ? 80.h : 60.h,
       width: double.infinity,
       child: CustomPaint(
-        painter: _SparkLinePainter(data: data, color: color),
+        painter: _SparkLinePainter(data: data, color: color, labels: labels),
       ),
     );
   }
@@ -22,8 +28,13 @@ class SparkLine extends StatelessWidget {
 class _SparkLinePainter extends CustomPainter {
   final List<double> data;
   final Color color;
+  final List<String>? labels;
 
-  _SparkLinePainter({required this.data, required this.color});
+  _SparkLinePainter({
+    required this.data, 
+    required this.color, 
+    this.labels,
+  });
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -33,20 +44,23 @@ class _SparkLinePainter extends CustomPainter {
     final minVal = data.reduce((a, b) => a < b ? a : b);
     final range = maxVal - minVal == 0 ? 1.0 : maxVal - minVal;
 
+    final bottomPadding = labels != null ? 24.0 : 6.0;
+    final graphHeight = size.height - bottomPadding - 18.0;
+
     final points = <Offset>[];
     for (int i = 0; i < data.length; i++) {
       final x = data.length > 1 ? (i / (data.length - 1)) * size.width : size.width / 2;
-      final y = size.height - ((data[i] - minVal) / range) * (size.height - 18) - 6;
+      final y = size.height - bottomPadding - ((data[i] - minVal) / range) * graphHeight;
       points.add(Offset(x, y));
     }
 
     // Area fill gradient
     final areaPath = Path();
-    areaPath.moveTo(0, size.height);
+    areaPath.moveTo(0, size.height - bottomPadding);
     for (final pt in points) {
       areaPath.lineTo(pt.dx, pt.dy);
     }
-    areaPath.lineTo(size.width, size.height);
+    areaPath.lineTo(size.width, size.height - bottomPadding);
     areaPath.close();
 
     final gradient = LinearGradient(
@@ -60,7 +74,7 @@ class _SparkLinePainter extends CustomPainter {
     canvas.drawPath(
       areaPath,
       Paint()
-        ..shader = gradient.createShader(Rect.fromLTWH(0, 0, size.width, size.height))
+        ..shader = gradient.createShader(Rect.fromLTWH(0, 0, size.width, size.height - bottomPadding))
         ..style = PaintingStyle.fill,
     );
 
@@ -101,9 +115,33 @@ class _SparkLinePainter extends CustomPainter {
           ..strokeWidth = 2,
       );
     }
+
+    // Labels
+    if (labels != null && labels!.isNotEmpty) {
+      final textPainter = TextPainter(
+        textAlign: TextAlign.center,
+        textDirection: TextDirection.ltr,
+      );
+
+      for (int i = 0; i < points.length; i++) {
+        if (i < labels!.length) {
+          textPainter.text = TextSpan(
+            text: labels![i],
+            style: TextStyle(
+              color: Colors.grey.withValues(alpha: 0.8),
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
+            ),
+          );
+          textPainter.layout();
+          final x = points[i].dx - (textPainter.width / 2);
+          textPainter.paint(canvas, Offset(x, size.height - bottomPadding + 8));
+        }
+      }
+    }
   }
 
   @override
   bool shouldRepaint(_SparkLinePainter oldDelegate) =>
-      oldDelegate.data != data || oldDelegate.color != color;
+      oldDelegate.data != data || oldDelegate.color != color || oldDelegate.labels != labels;
 }
