@@ -682,6 +682,7 @@ class HydrationProvider extends ChangeNotifier {
 
   void updateWakeTime(String time) {
     _userData.wakeTime = time;
+    _regenerateSmartTimes();
     _updateReminders();
     _saveToPrefs();
     notifyListeners();
@@ -689,6 +690,7 @@ class HydrationProvider extends ChangeNotifier {
 
   void updateSleepTime(String time) {
     _userData.sleepTime = time;
+    _regenerateSmartTimes();
     _updateReminders();
     _saveToPrefs();
     notifyListeners();
