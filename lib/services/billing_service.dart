@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'widget_service.dart';
 
 class BillingService extends ChangeNotifier {
   final InAppPurchase _inAppPurchase = InAppPurchase.instance;
@@ -91,6 +92,10 @@ class BillingService extends ChangeNotifier {
       _isPremium = true;
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool('isPremium', true);
+      
+      // Update widgets immediately to unlock and populate them
+      await WidgetService.syncFullWidgetData();
+      
       notifyListeners();
     }
   }

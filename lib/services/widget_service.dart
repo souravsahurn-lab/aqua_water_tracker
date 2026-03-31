@@ -303,4 +303,48 @@ class WidgetService {
       await HomeWidget.updateWidget(name: 'GridWidgetReceiver', androidName: 'GridWidgetReceiver');
     } catch (_) { }
   }
+  /// Reads latest data from SharedPreferences and pushes it to widgets.
+  /// Useful when external services (like Billing) update core flags.
+  static Future<void> syncFullWidgetData() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.reload();
+
+      UserData userData = UserData();
+      final userDataStr = prefs.getString('userData');
+      if (userDataStr != null) {
+        try {
+          userData = UserData.fromJson(jsonDecode(userDataStr));
+        } catch (_) {}
+      }
+
+      List<DrinkLog> logs = [];
+      final logsStr = prefs.getString('logs');
+      if (logsStr != null) {
+        try {
+          final List<dynamic> decoded = jsonDecode(logsStr);
+          logs = decoded.map((l) => DrinkLog.fromJson(l)).toList();
+        } catch (_) {}
+      }
+
+      await updateWidgetData(userData, logs: logs);
+    } catch (_) {}
+  }
+
+  /// Only sync the premium status to the widget. 
+  /// Useful for instant unlocking after a purchase.
+  static Future<void> syncPremiumStatus() async {
+    try {
+      final mainPrefs = await SharedPreferences.getInstance();
+      final isPro = mainPrefs.getBool('isPremium') ?? false;
+      await HomeWidget.saveWidgetData<bool>('is_premium', isPro);
+      
+      // Trigger update for all widgets
+      await HomeWidget.updateWidget(name: 'WaterWidgetReceiver', androidName: 'WaterWidgetReceiver');
+      await HomeWidget.updateWidget(name: 'HourlyWidgetReceiver', androidName: 'HourlyWidgetReceiver');
+      await HomeWidget.updateWidget(name: 'WeeklyWidgetReceiver', androidName: 'WeeklyWidgetReceiver');
+      await HomeWidget.updateWidget(name: 'BottleWidgetReceiver', androidName: 'BottleWidgetReceiver');
+      await HomeWidget.updateWidget(name: 'GridWidgetReceiver', androidName: 'GridWidgetReceiver');
+    } catch (_) {}
+  }
 }
