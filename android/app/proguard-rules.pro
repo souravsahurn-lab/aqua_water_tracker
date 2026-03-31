@@ -69,3 +69,9 @@
 -keepattributes Signature, *Annotation*, EnclosingMethod, InnerClasses
 -keep class com.solefate.aquawatertracker.** { *; }
 
+# ── Meta Ads (Facebook) mediation ──
+-keep class com.facebook.ads.** { *; }
+-dontwarn com.facebook.ads.**
+-dontwarn com.facebook.infer.annotation.**
+
+
