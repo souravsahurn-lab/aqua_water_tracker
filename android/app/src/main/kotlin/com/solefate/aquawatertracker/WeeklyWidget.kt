@@ -174,6 +174,14 @@ class WeeklyWidget : GlanceAppWidget() {
             }
             val goalFloat = goal.toFloat().coerceAtLeast(1f)
 
+            // Parse weekly goals
+            val goalsStr = prefs.getString("weekly_goals", "") ?: ""
+            var goals = if (goalsStr.isNotEmpty()) {
+                goalsStr.split(",").map { it.toIntOrNull() ?: goal }
+            } else {
+                List(vals.size) { goal }
+            }
+
             Column(
                 modifier = GlanceModifier
                     .fillMaxSize()
@@ -238,6 +246,10 @@ class WeeklyWidget : GlanceAppWidget() {
                 ) {
                     val barCount = vals.size.coerceAtMost(labelsTop.size)
                     for (i in 0 until barCount) {
+                        val v = vals[i]
+                        val g = if (i < goals.size) goals[i].coerceAtLeast(1) else goal
+                        val gFloat = g.toFloat()
+
                         Column(
                             modifier = GlanceModifier
                                 .defaultWeight()
@@ -245,16 +257,35 @@ class WeeklyWidget : GlanceAppWidget() {
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalAlignment = Alignment.Bottom
                         ) {
-                            // Bar — color based on how close to goal
-                            val rawDynMaxH = (size.height.value - 149f).coerceAtLeast(10f)
+                            val rawDynMaxH = (size.height.value - 158f).coerceAtLeast(10f)
                             val dynMaxH = (rawDynMaxH * 0.9f).coerceAtLeast(10f)
-                            val barHGauge = (vals[i].toFloat() / goalFloat * dynMaxH).coerceIn(0f, dynMaxH)
-                            val barH = if (vals[i] > 0) barHGauge.coerceAtLeast(8f) else 0f
+                            val barHGauge = (v.toFloat() / gFloat * dynMaxH).coerceIn(0f, dynMaxH)
+                            val barH = if (v > 0) barHGauge.coerceAtLeast(8f) else 0f
 
-                            val barColor = if (vals[i] > 0) {
-                                getCompletionColor(vals[i], goal)
+                            val isTargetMet = v >= g
+                            val barColor = if (v > 0) {
+                                getCompletionColor(v, g)
                             } else {
                                 c.card
+                            }
+
+                            // Show intake above bar (short form for space)
+                            if (v > 0) {
+                                val displayVal = if (v >= 1000) {
+                                    String.format("%.1fk", v / 1000f)
+                                } else {
+                                    "$v"
+                                }
+                                Text(
+                                    text = displayVal,
+                                    maxLines = 1,
+                                    style = TextStyle(
+                                        color = if (isTargetMet) completedColor else c.textSub,
+                                        fontSize = 7.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                )
+                                Spacer(modifier = GlanceModifier.height(2.dp))
                             }
 
                             Box(
@@ -265,7 +296,7 @@ class WeeklyWidget : GlanceAppWidget() {
                                     .background(c.card),
                                 contentAlignment = Alignment.BottomCenter
                             ) {
-                                if (vals[i] > 0) {
+                                if (v > 0) {
                                     Box(
                                         modifier = GlanceModifier
                                             .fillMaxWidth()
@@ -281,8 +312,8 @@ class WeeklyWidget : GlanceAppWidget() {
                                 text = if (i < labelsTop.size) labelsTop[i] else "",
                                 maxLines = 1,
                                 style = TextStyle(
-                                    color = c.textSub,
-                                    fontWeight = FontWeight.Medium,
+                                    color = if (i == barCount - 1) c.textMain else c.textSub,
+                                    fontWeight = if (i == barCount - 1) FontWeight.Bold else FontWeight.Medium,
                                     fontSize = 9.sp
                                 )
                             )

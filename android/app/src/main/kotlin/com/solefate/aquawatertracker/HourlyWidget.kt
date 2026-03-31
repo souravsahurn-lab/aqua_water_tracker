@@ -217,6 +217,9 @@ class HourlyWidget : GlanceAppWidget() {
                     verticalAlignment = Alignment.Bottom
                 ) {
                     val barCount = vals.size.coerceAtMost(labels.size)
+                    // Scaled target for hourly bars (e.g. 350ml is a "full" bar if goal is 2400)
+                    val hourlyScaleTarget = (goalFloat / barCount.coerceAtLeast(1) * 1.5f).coerceAtLeast(100f)
+
                     for (i in 0 until barCount) {
                         Column(
                             modifier = GlanceModifier
@@ -225,13 +228,31 @@ class HourlyWidget : GlanceAppWidget() {
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalAlignment = Alignment.Bottom
                         ) {
-                            val rawDynMaxH = (size.height.value - 149f).coerceAtLeast(10f)
+                            val v = vals[i]
+                            val rawDynMaxH = (size.height.value - 158f).coerceAtLeast(10f)
                             val dynMaxH = (rawDynMaxH * 0.9f).coerceAtLeast(10f)
-                            val barHGauge = (vals[i].toFloat() / goalFloat * dynMaxH).coerceIn(0f, dynMaxH)
-                            val barH = if (vals[i] > 0) barHGauge.coerceAtLeast(8f) else 0f
                             
-                            val isGoalMet = vals[i] >= goal
+                            // Scale bar height to our estimated hourly target
+                            val barHGauge = (v.toFloat() / hourlyScaleTarget * dynMaxH).coerceIn(0f, dynMaxH)
+                            val barH = if (v > 0) barHGauge.coerceAtLeast(8f) else 0f
                             
+                            // Check against a "target met" for this hour (e.g. 1/8th of goal)
+                            val isHourlyTargetMet = v >= (goalFloat / barCount.coerceAtLeast(1))
+
+                            // Show intake value above bar if it exists
+                            if (v > 0) {
+                                Text(
+                                    text = "$v",
+                                    maxLines = 1,
+                                    style = TextStyle(
+                                        color = if (isHourlyTargetMet) completedColor else c.textSub,
+                                        fontSize = 8.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                )
+                                Spacer(modifier = GlanceModifier.height(3.dp))
+                            }
+
                             Box(
                                 modifier = GlanceModifier
                                     .fillMaxWidth()
@@ -240,13 +261,13 @@ class HourlyWidget : GlanceAppWidget() {
                                     .background(c.card),
                                 contentAlignment = Alignment.BottomCenter
                             ) {
-                                if (vals[i] > 0) {
+                                if (v > 0) {
                                     Box(
                                         modifier = GlanceModifier
                                             .fillMaxWidth()
                                             .height(barH.dp)
                                             .cornerRadius(24.dp)
-                                            .background(if (isGoalMet) completedColor else c.primary)
+                                            .background(if (isHourlyTargetMet) completedColor else c.primary)
                                     ) {}
                                 }
                             }
@@ -255,8 +276,8 @@ class HourlyWidget : GlanceAppWidget() {
                                 text = if (i < labels.size) labels[i] else "",
                                 maxLines = 1,
                                 style = TextStyle(
-                                    color = c.textSub,
-                                    fontWeight = FontWeight.Medium,
+                                    color = if (v > 0) c.textMain else c.textSub,
+                                    fontWeight = if (v > 0) FontWeight.Bold else FontWeight.Medium,
                                     fontSize = 8.sp
                                 )
                             )
