@@ -1,3 +1,4 @@
+import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
@@ -22,6 +23,7 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   void initState() {
     super.initState();
+    FlutterNativeSplash.remove();
     _rippleController = AnimationController(
       vsync: this,
       duration: Duration(milliseconds: 3200),
