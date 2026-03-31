@@ -920,29 +920,79 @@ class _LogsBottomSheet extends StatelessWidget {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        "Today's Log",
-                        style: TextStyle(
-                          fontSize: 18.sp,
-                          fontWeight: FontWeight.w800,
-                          color: context.colors.primaryDark,
-                        ),
+                      Row(
+                        children: [
+                          Text(
+                            "Today's Log",
+                            style: TextStyle(
+                              fontSize: 18.sp,
+                              fontWeight: FontWeight.w800,
+                              color: context.colors.primaryDark,
+                            ),
+                          ),
+                          SizedBox(width: 8.w),
+                          Container(
+                            padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
+                            decoration: BoxDecoration(
+                              color: context.colors.primary.withValues(alpha: 0.07),
+                              borderRadius: BorderRadius.circular(8.r),
+                            ),
+                            child: Text(
+                              '${logs.length}',
+                              style: TextStyle(
+                                fontSize: 11.sp,
+                                fontWeight: FontWeight.w700,
+                                color: context.colors.primary,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                      Container(
-                        padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
-                        decoration: BoxDecoration(
-                          color: context.colors.primary.withValues(alpha: 0.07),
-                          borderRadius: BorderRadius.circular(8.r),
-                        ),
-                        child: Text(
-                          '${logs.length} entries',
-                          style: TextStyle(
-                            fontSize: 11.sp,
-                            fontWeight: FontWeight.w700,
-                            color: context.colors.primary,
+                      if (logs.isNotEmpty)
+                        TextButton(
+                          onPressed: () {
+                            HapticFeedback.heavyImpact();
+                            showDialog(
+                              context: context,
+                              builder: (ctx) => AlertDialog(
+                                backgroundColor: context.colors.card,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20.r)),
+                                title: Text('Clear All Logs?', style: TextStyle(color: context.colors.primaryDark)),
+                                content: Text('This will reset your intake for today. This cannot be undone.', 
+                                  style: TextStyle(color: context.colors.mutedLight)),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(ctx),
+                                    child: Text('Cancel', style: TextStyle(color: context.colors.muted)),
+                                  ),
+                                  TextButton(
+                                    onPressed: () {
+                                      provider.clearTodayLogs();
+                                      Navigator.pop(ctx);
+                                      TopSnackBar.show(
+                                        context,
+                                        message: 'All logs cleared',
+                                        type: TopSnackBarType.info,
+                                      );
+                                    },
+                                    child: Text('Clear All', style: TextStyle(color: context.colors.danger, fontWeight: FontWeight.bold)),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                          style: TextButton.styleFrom(
+                            foregroundColor: context.colors.danger,
+                            padding: EdgeInsets.symmetric(horizontal: 12.w),
+                          ),
+                          child: Text(
+                            "Clear",
+                            style: TextStyle(
+                              fontSize: 13.sp,
+                              fontWeight: FontWeight.w700,
+                            ),
                           ),
                         ),
-                      ),
                     ],
                   ),
                 ),

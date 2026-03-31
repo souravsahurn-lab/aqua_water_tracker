@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Aqua - Water Tracker</string>
+    <string name="water_widget_description">Track your daily water intake at a glance</string>
+</resources>

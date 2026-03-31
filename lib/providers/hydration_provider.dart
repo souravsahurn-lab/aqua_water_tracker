@@ -4,8 +4,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user_data.dart';
 import '../models/drink_log.dart';
 import '../services/notification_service.dart';
+import '../services/widget_service.dart';
 
-class HydrationProvider extends ChangeNotifier {
+class HydrationProvider extends ChangeNotifier with WidgetsBindingObserver {
   UserData _userData = UserData();
   List<DrinkLog> _logs = [];
 
@@ -15,7 +16,51 @@ class HydrationProvider extends ChangeNotifier {
   bool _remindersInitialized = false;
 
   HydrationProvider() {
+    WidgetsBinding.instance.addObserver(this);
     _loadFromPrefs();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  /// When the app comes back to foreground, re-sync from SharedPreferences
+  /// in case the widget background callback updated the data.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && _isInit) {
+      _syncFromWidget();
+    }
+  }
+
+  /// Lightweight sync: only re-reads if intake changed externally (widget).
+  Future<void> _syncFromWidget() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      // Force a fresh read from disk
+      await prefs.reload();
+      final userDataStr = prefs.getString('userData');
+      if (userDataStr == null) return;
+
+      final freshData = UserData.fromJson(jsonDecode(userDataStr));
+      // Only apply if the intake value differs (widget added water)
+      if (freshData.drunk != _userData.drunk) {
+        _userData.drunk = freshData.drunk;
+
+        // Also reload logs since the widget callback adds entries
+        final logsStr = prefs.getString('logs');
+        if (logsStr != null) {
+          final List<dynamic> decoded = jsonDecode(logsStr);
+          _logs = decoded.map((l) => DrinkLog.fromJson(l)).toList();
+        }
+
+        // Push the synced state back to the widget for consistency
+        await WidgetService.updateWidgetData(_userData);
+        super.notifyListeners(); // Use super to avoid re-saving to prefs
+      }
+    } catch (_) {}
   }
 
   Future<void> _loadFromPrefs() async {
@@ -65,6 +110,7 @@ class HydrationProvider extends ChangeNotifier {
     await prefs.setInt('setupStep', _setupStep);
     await prefs.setBool('isSetupComplete', _isSetupComplete);
     await prefs.setBool('remindersInitialized', _remindersInitialized);
+    await WidgetService.updateWidgetData(_userData, logs: _logs);
   }
 
   @override
@@ -688,6 +734,17 @@ class HydrationProvider extends ChangeNotifier {
     if (index >= 0 && index < _logs.length) {
       final removed = _logs.removeAt(index);
       _userData.drunk = (_userData.drunk - removed.ml).clamp(0, 99999);
+      notifyListeners();
+    }
+  }
+
+  void clearTodayLogs() {
+    final today = DateTime.now().toIso8601String().split('T')[0];
+    final initialCount = _logs.length;
+    _logs.removeWhere((log) => log.date == today);
+    
+    if (_logs.length != initialCount) {
+      _userData.drunk = 0;
       notifyListeners();
     }
   }

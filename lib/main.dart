@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'theme/app_theme.dart';
 import 'providers/hydration_provider.dart';
 import 'services/notification_service.dart';
+import 'services/widget_service.dart';
 import 'screens/splash_screen.dart';
 import 'screens/onboarding_screen.dart';
 import 'screens/setup_screen.dart';
@@ -15,6 +16,7 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
   await NotificationService().init();
+  await WidgetService.initialize();
 
   // Use edgeToEdge as the primary mode to prevent 'black bar' glitches
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
