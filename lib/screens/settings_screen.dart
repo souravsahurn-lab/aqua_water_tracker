@@ -7,6 +7,7 @@ import '../widgets/app_button.dart';
 import '../widgets/top_snackbar.dart';
 import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../services/billing_service.dart';
 import 'premium_screen.dart';
 
@@ -326,7 +327,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           emoji: '🔒',
                           label: 'Privacy Policy',
                           value: 'View',
-                          onTap: () => _showPrivacyPolicy(context),
+                          onTap: () async {
+                            final url = Uri.parse('https://solefate.blogspot.com/p/privacy-policy-for-aqua-water-reminder.html');
+                            if (await canLaunchUrl(url)) {
+                              await launchUrl(url, mode: LaunchMode.externalApplication);
+                            }
+                          },
                         ),
                         _settingRow(
                           c: c,
@@ -892,75 +898,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  // ═══════════════════════════════════════════════════════════════════
-  // Privacy Policy
-  // ═══════════════════════════════════════════════════════════════════
 
-  void _showPrivacyPolicy(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) => Container(
-        height: MediaQuery.of(ctx).size.height * 0.75,
-        decoration: BoxDecoration(
-          color: context.colors.card,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(32.r)),
-        ),
-        child: Column(
-          children: [
-            SizedBox(height: 12.h),
-            Center(child: Container(width: 40.w, height: 4.h, decoration: BoxDecoration(color: context.colors.softLight, borderRadius: BorderRadius.circular(10.r)))),
-            Padding(
-              padding: EdgeInsets.fromLTRB(24.w, 20.h, 24.w, 16.h),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text('Privacy Policy', style: TextStyle(fontSize: 20.sp, fontWeight: FontWeight.w800, color: context.colors.primaryDark)),
-                  GestureDetector(
-                    onTap: () => Navigator.pop(ctx),
-                    child: Icon(Icons.close_rounded, color: context.colors.mutedLight),
-                  ),
-                ],
-              ),
-            ),
-            Expanded(
-              child: SingleChildScrollView(
-                padding: EdgeInsets.fromLTRB(24.w, 0, 24.w, 30.h),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _policySection('Data Collection', 'Aqua Water Tracker collects only the personal information you provide during setup (name, weight, height, activity level, and wake/sleep schedule). This data is stored locally on your device and is never transmitted to external servers.'),
-                    _policySection('Data Storage', 'All your hydration logs, preferences, and personal information are stored locally on your device using SharedPreferences. No cloud storage or external databases are used.'),
-                    _policySection('Notifications', 'The app uses local notifications to remind you to drink water. Notification permissions are requested at setup. You can disable notifications at any time from the Settings screen.'),
-                    _policySection('Third-Party Services', 'Aqua does not integrate with any third-party analytics, advertising, or tracking services. Your data stays on your device.'),
-                    _policySection('Data Deletion', 'You can delete all your data at any time using the "Reset All Data" option in Settings. This permanently removes all stored information from your device.'),
-                    _policySection('Changes', 'We may update this privacy policy from time to time. Any changes will be reflected in the app.'),
-                    SizedBox(height: 16.h),
-                    Text('Last updated: March 2026', style: TextStyle(fontSize: 11.sp, color: context.colors.mutedLight)),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _policySection(String title, String body) {
-    return Padding(
-      padding: EdgeInsets.only(bottom: 16.h),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(title, style: TextStyle(fontSize: 14.sp, fontWeight: FontWeight.w700, color: context.colors.primaryDark)),
-          SizedBox(height: 6.h),
-          Text(body, style: TextStyle(fontSize: 13.sp, color: context.colors.text, height: 1.6)),
-        ],
-      ),
-    );
-  }
 
   // ═══════════════════════════════════════════════════════════════════
   // Reset Confirmation
