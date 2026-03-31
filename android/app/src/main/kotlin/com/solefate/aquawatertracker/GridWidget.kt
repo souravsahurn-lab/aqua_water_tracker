@@ -49,12 +49,10 @@ class UndoGridWaterAction : ActionCallback {
         val prefs = HomeWidgetPlugin.getData(context)
         val lastAdded = prefs.getInt("last_added_ml", 0)
 
-        // Only undo if we know there was a recent addition safely logged
         if (lastAdded > 0) {
             val currentIntake = prefs.getInt("intake", 0)
             val newIntake = (currentIntake - lastAdded).coerceAtLeast(0)
             
-            // Instantly clear out last_added_ml to prevent multiple undos locally
             prefs.edit()
                 .putInt("intake", newIntake)
                 .putInt("last_added_ml", 0)
@@ -63,7 +61,6 @@ class UndoGridWaterAction : ActionCallback {
             GridWidget().update(context, glanceId)
 
             try {
-                // Sent intent to trigger Dart background sync
                 HomeWidgetBackgroundIntent.getBroadcast(
                     context,
                     Uri.parse("waterWidget://undo")
@@ -86,7 +83,7 @@ class AddGridWaterAction : ActionCallback {
         val currentIntake = prefs.getInt("intake", 0)
         prefs.edit()
             .putInt("intake", currentIntake + amount)
-            .putInt("last_added_ml", amount) // Overwrite history for immediate undo
+            .putInt("last_added_ml", amount)
             .apply()
 
         GridWidget().update(context, glanceId)
@@ -110,9 +107,25 @@ class GridWidget : GlanceAppWidget() {
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         provideContent {
             val c = dynamicColors
-            val completedColor = ColorProvider(Color(0xFF22C55E)) // Green for completed
+            val completedColor = ColorProvider(Color(0xFF22C55E))
             val state = currentState<HomeWidgetGlanceState>()
             val prefs = state.preferences
+
+            val isPremium = prefs.getBoolean("is_premium", false)
+            if (!isPremium) {
+                Box(
+                    modifier = GlanceModifier.fillMaxSize().cornerRadius(16.dp).background(c.bg).padding(12.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(text = "🔒", style = TextStyle(fontSize = 24.sp))
+                        Spacer(modifier = GlanceModifier.height(6.dp))
+                        Text(text = "Aqua Pro", style = TextStyle(color = c.textMain, fontWeight = FontWeight.Bold, fontSize = 13.sp))
+                        Text(text = "Upgrade to unlock", style = TextStyle(color = c.textSub, fontSize = 10.sp))
+                    }
+                }
+                return@provideContent
+            }
 
             val intake = prefs.getInt("intake", 0)
             val goal = prefs.getInt("goal", 2450).coerceAtLeast(1)
@@ -120,18 +133,16 @@ class GridWidget : GlanceAppWidget() {
             
             val isCompleted = intake >= goal
             val intakeColor = if (isCompleted) completedColor else c.textMain
-            
-            // Allow an undo explicitly
-            val canUndo = prefs.getInt("last_added_ml", 0) > 0
+            val pctStr = String.format("%.0f", (intake.toFloat() / goal.toFloat()).coerceIn(0f, 1f) * 100)
 
             Column(
                 modifier = GlanceModifier
                     .fillMaxSize()
                     .cornerRadius(24.dp)
                     .background(c.bg)
-                    .padding(14.dp)
+                    .padding(12.dp)
             ) {
-                // Header (Intake & Undo)
+                // ── Header ──
                 Row(
                     modifier = GlanceModifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
@@ -141,54 +152,52 @@ class GridWidget : GlanceAppWidget() {
                             Text(
                                 text = "$intake",
                                 maxLines = 1,
-                                style = TextStyle(color = intakeColor, fontWeight = FontWeight.Bold, fontSize = 22.sp)
+                                style = TextStyle(
+                                    color = intakeColor,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 24.sp
+                                )
                             )
                             Text(
-                                text = " / $goal ml",
+                                text = "/$goal",
                                 maxLines = 1,
-                                style = TextStyle(color = c.textSub, fontWeight = FontWeight.Medium, fontSize = 11.sp),
-                                modifier = GlanceModifier.padding(bottom = 3.dp, start = 2.dp)
+                                style = TextStyle(
+                                    color = c.textSub,
+                                    fontWeight = FontWeight.Medium,
+                                    fontSize = 10.sp
+                                ),
+                                modifier = GlanceModifier.padding(bottom = 4.dp, start = 2.dp)
                             )
-                        }
-                    }
-
-                    // Undo Button
-                    if (canUndo) {
-                        Box(
-                            modifier = GlanceModifier
-                                .clickable(actionRunCallback<UndoGridWaterAction>())
-                                .cornerRadius(8.dp)
-                                .background(c.card)
-                                .padding(horizontal = 10.dp, vertical = 6.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text("↺", style = TextStyle(color = c.primary, fontWeight = FontWeight.Bold, fontSize = 14.sp))
                         }
                     }
                 }
 
-                // Next reminder
+                // Status line
                 Text(
-                    text = "🔔 $nextReminder",
+                    text = "$pctStr%  ·  🔔 $nextReminder",
                     maxLines = 1,
-                    style = TextStyle(color = c.primary, fontWeight = FontWeight.Medium, fontSize = 11.sp),
-                    modifier = GlanceModifier.padding(top = 4.dp, bottom = 12.dp)
+                    style = TextStyle(
+                        color = c.textSub,
+                        fontWeight = FontWeight.Medium,
+                        fontSize = 10.sp
+                    ),
+                    modifier = GlanceModifier.padding(top = 2.dp)
                 )
 
                 Spacer(modifier = GlanceModifier.defaultWeight())
 
-                // 2x2 Quick Add Buttons Grid
+                // ── 2×2 Quick-add ──
                 Column(modifier = GlanceModifier.fillMaxWidth()) {
                     Row(modifier = GlanceModifier.fillMaxWidth()) {
                         listOf(100, 250).forEachIndexed { i, amt ->
-                            if (i > 0) Spacer(modifier = GlanceModifier.width(6.dp))
+                            if (i > 0) Spacer(modifier = GlanceModifier.width(5.dp))
                             Box(
                                 modifier = GlanceModifier
                                     .defaultWeight()
                                     .clickable(actionRunCallback<AddGridWaterAction>(actionParametersOf(amountKey to amt)))
-                                    .cornerRadius(10.dp)
+                                    .cornerRadius(8.dp)
                                     .background(c.card)
-                                    .padding(vertical = 10.dp),
+                                    .padding(vertical = 9.dp),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
@@ -199,17 +208,17 @@ class GridWidget : GlanceAppWidget() {
                             }
                         }
                     }
-                    Spacer(modifier = GlanceModifier.height(6.dp))
+                    Spacer(modifier = GlanceModifier.height(5.dp))
                     Row(modifier = GlanceModifier.fillMaxWidth()) {
                         listOf(300, 500).forEachIndexed { i, amt ->
-                            if (i > 0) Spacer(modifier = GlanceModifier.width(6.dp))
+                            if (i > 0) Spacer(modifier = GlanceModifier.width(5.dp))
                             Box(
                                 modifier = GlanceModifier
                                     .defaultWeight()
                                     .clickable(actionRunCallback<AddGridWaterAction>(actionParametersOf(amountKey to amt)))
-                                    .cornerRadius(10.dp)
+                                    .cornerRadius(8.dp)
                                     .background(c.card)
-                                    .padding(vertical = 10.dp),
+                                    .padding(vertical = 9.dp),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(

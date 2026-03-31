@@ -148,7 +148,24 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                               : (DateTime.now().weekday == 7 ? 0 : DateTime.now().weekday);
 
                           // Reference max: scale to the full daily goal, even for hourly bars.
+                          // Reference max: scale to the full daily goal, even for hourly bars.
                           final refMax = goal;
+
+                          List<Color>? barColors;
+                          if (period == 'week') {
+                            final goals = provider.getWeeklyGoals();
+                            barColors = List.generate(barData.length, (i) {
+                                final intake = barData[i];
+                                final dayGoal = i < goals.length ? goals[i] : goal;
+                                final pct = dayGoal > 0 ? (intake / dayGoal * 100) : 0;
+                                
+                                if (pct >= 100) return context.colors.success;
+                                if (pct >= 75) return const Color(0xFF4ADE80);
+                                if (pct >= 50) return const Color(0xFFFBBF24);
+                                if (pct >= 25) return const Color(0xFFF97316);
+                                return context.colors.danger;
+                            });
+                          }
 
                           return Column(
                             children: [
@@ -175,6 +192,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                                 highlightIndex: highlightIdx,
                                 totalLabel: period == 'day' ? null : 'Total: ${_formatTotalMl(total)}',
                                 referenceMax: refMax,
+                                barColors: barColors,
                               ),
                               SizedBox(height: 16.h),
                               _buildStatsSummary(context, provider, period),
@@ -453,28 +471,58 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                 Row(
                   children: List.generate(7, (i) {
                     final met = weekStatus[i];
+                    
+                    // Calculate color for dot based on progress
+                    final now = DateTime.now();
+                    final diff = now.weekday == 7 ? 0 : now.weekday;
+                    final sunday = now.subtract(Duration(days: diff));
+                    final date = sunday.add(Duration(days: i)).toIso8601String().split('T')[0];
+                    final intake = provider.logs.where((l) => l.date == date).fold(0, (p, c) => p + c.ml);
+                    final dayGoal = provider.userData.goalForDate(date);
+                    final pct = dayGoal > 0 ? (intake / dayGoal * 100) : 0;
+                    
+                    Color dotColor;
+                    if (met) {
+                      dotColor = context.colors.success;
+                    } else if (pct >= 75) {
+                      dotColor = const Color(0xFF4ADE80);
+                    } else if (pct >= 50) {
+                      dotColor = const Color(0xFFFBBF24);
+                    } else if (pct >= 25) {
+                      dotColor = const Color(0xFFF97316);
+                    } else if (intake > 0) {
+                      dotColor = context.colors.danger;
+                    } else {
+                      dotColor = context.colors.softLight;
+                    }
+
+                    final isFuture = sunday.add(Duration(days: i)).isAfter(now);
+                    final finalColor = isFuture ? context.colors.softLight : dotColor;
+
                     return Container(
                       width: 26.w,
                       height: 26.h,
                       margin: EdgeInsets.only(right: 5.w),
                       decoration: BoxDecoration(
-                        gradient: met ? context.colors.primaryGradient : null,
-                        color: met ? null : context.colors.softLight,
+                        color: finalColor,
                         borderRadius: BorderRadius.circular(8.r),
-                        border: !met ? Border.all(
+                        border: (finalColor == context.colors.softLight) ? Border.all(
                           color: context.colors.muted.withValues(alpha: 0.2),
                           width: 1,
                         ) : null,
+                        boxShadow: !isFuture && intake > 0 ? [
+                           BoxShadow(color: finalColor.withValues(alpha: 0.2), blurRadius: 4, offset: const Offset(0, 2))
+                        ] : null,
                       ),
                       child: Center(
                         child: met
-                            ? Icon(Icons.check, size: 11, color: Colors.white)
+                            ? const Icon(Icons.check, size: 11, color: Colors.white)
                             : Text(
                                 days[i],
                                 style: TextStyle(
                                   fontSize: 9.sp,
                                   fontWeight: FontWeight.w600,
-                                  color: context.colors.mutedLight,
+                                  color: finalColor == context.colors.softLight ? context.colors.mutedLight : Colors.white.withValues(alpha: 0.9),
                                 ),
                               ),
                       ),

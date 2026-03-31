@@ -1,5 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Aqua - Water Tracker</string>
-    <string name="water_widget_description">Track your daily water intake at a glance</string>
+    <string name="water_widget_description">Track your daily water intake at a glance (Aqua Pro)</string>
+    <string name="hourly_widget_description">Hourly hydration breakdown with quick-add (Aqua Pro)</string>
+    <string name="weekly_widget_description">Weekly hydration chart with daily progress (Aqua Pro)</string>
+    <string name="bottle_widget_description">Visual bottle fill indicator with quick-add (Aqua Pro)</string>
+    <string name="grid_widget_description">Compact quick-add grid for fast logging (Aqua Pro)</string>
 </resources>
+

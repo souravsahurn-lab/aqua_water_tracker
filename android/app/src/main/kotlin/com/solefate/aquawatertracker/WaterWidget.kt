@@ -72,7 +72,6 @@ class AddWaterAction : ActionCallback {
         val amount = parameters[amountKey] ?: 0
         if (amount <= 0) return
 
-        // 1. Immediately update widget prefs for instant visual feedback
         val prefs = HomeWidgetPlugin.getData(context)
         val currentIntake = prefs.getInt("intake", 0)
         prefs.edit()
@@ -80,10 +79,8 @@ class AddWaterAction : ActionCallback {
             .putInt("last_added_ml", amount)
             .apply()
 
-        // 2. Refresh widget UI immediately
         WaterWidget().update(context, glanceId)
 
-        // 3. Fire Dart background callback to persist in Flutter storage
         try {
             HomeWidgetBackgroundIntent.getBroadcast(
                 context,
@@ -131,10 +128,50 @@ class WaterWidget : GlanceAppWidget() {
         provideContent {
             val ctx = LocalContext.current
             val c = dynamicColors
+            val completedColor = ColorProvider(Color(0xFF22C55E))
             
-            // Connect Compose to HomeWidget SharedPreferences
             val state = currentState<HomeWidgetGlanceState>()
             val prefs = state.preferences
+
+            val isPremium = prefs.getBoolean("is_premium", false)
+
+            if (!isPremium) {
+                // Locked overlay
+                Box(
+                    modifier = GlanceModifier
+                        .fillMaxSize()
+                        .cornerRadius(16.dp)
+                        .background(c.bg)
+                        .padding(horizontal = 14.dp, vertical = 8.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = "🔒",
+                            style = TextStyle(fontSize = 18.sp)
+                        )
+                        Spacer(modifier = GlanceModifier.width(8.dp))
+                        Column {
+                            Text(
+                                text = "Aqua Pro Required",
+                                style = TextStyle(
+                                    color = c.textMain,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 13.sp
+                                )
+                            )
+                            Text(
+                                text = "Upgrade to unlock widgets",
+                                style = TextStyle(
+                                    color = c.textSub,
+                                    fontSize = 10.sp
+                                )
+                            )
+                        }
+                    }
+                }
+                return@provideContent
+            }
 
             val intake  = prefs.getInt("intake", 0)
             val goal    = prefs.getInt("goal", 2450).coerceAtLeast(1)
@@ -144,6 +181,7 @@ class WaterWidget : GlanceAppWidget() {
             val progress = (intake.toFloat() / goal.toFloat()).coerceIn(0f, 1f)
             val pctStr   = String.format("%.0f", progress * 100)
             val remaining = (goal - intake).coerceAtLeast(0)
+            val isCompleted = intake >= goal
 
             // ── Root ──
             Row(
@@ -151,10 +189,10 @@ class WaterWidget : GlanceAppWidget() {
                     .fillMaxSize()
                     .cornerRadius(16.dp)
                     .background(c.bg)
-                    .padding(horizontal = 14.dp, vertical = 6.dp),
+                    .padding(horizontal = 14.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Left Side: Stats Information
+                // ── Left: Stats ──
                 Column(
                     modifier = GlanceModifier.defaultWeight()
                 ) {
@@ -163,9 +201,9 @@ class WaterWidget : GlanceAppWidget() {
                             text = "$intake",
                             maxLines = 1,
                             style = TextStyle(
-                                color = c.textMain,
+                                color = if (isCompleted) completedColor else c.textMain,
                                 fontWeight = FontWeight.Bold,
-                                fontSize = 20.sp
+                                fontSize = 22.sp
                             )
                         )
                         Text(
@@ -176,61 +214,48 @@ class WaterWidget : GlanceAppWidget() {
                                 fontWeight = FontWeight.Medium,
                                 fontSize = 11.sp
                             ),
-                            modifier = GlanceModifier.padding(bottom = 2.dp, start = 4.dp)
+                            modifier = GlanceModifier.padding(bottom = 3.dp, start = 3.dp)
                         )
                         Text(
-                            text = "   \uD83D\uDD25 $streak",
+                            text = "  \uD83D\uDD25 $streak",
                             maxLines = 1,
                             style = TextStyle(
                                 color = c.streak,
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 11.sp
                             ),
-                            modifier = GlanceModifier.padding(bottom = 2.dp)
+                            modifier = GlanceModifier.padding(bottom = 3.dp)
                         )
-                        val canUndo = prefs.getInt("last_added_ml", 0) > 0
-                        if (canUndo) {
-                            Spacer(modifier = GlanceModifier.width(8.dp))
-                            Box(
-                                modifier = GlanceModifier
-                                    .clickable(actionRunCallback<UndoWaterAction>())
-                                    .cornerRadius(6.dp)
-                                    .background(c.card)
-                                    .padding(horizontal = 6.dp, vertical = 2.dp)
-                            ) {
-                                Text("↺", style = TextStyle(color = c.primary, fontWeight = FontWeight.Bold, fontSize = 11.sp))
-                            }
-                        }
                     }
 
-                    Spacer(modifier = GlanceModifier.height(4.dp))
+                    Spacer(modifier = GlanceModifier.height(5.dp))
 
                     LinearProgressIndicator(
                         progress = progress,
                         modifier = GlanceModifier
                             .fillMaxWidth()
-                            .height(6.dp)
-                            .cornerRadius(3.dp),
-                        color = c.primary,
+                            .height(8.dp)
+                            .cornerRadius(4.dp),
+                        color = if (isCompleted) completedColor else c.primary,
                         backgroundColor = c.card
                     )
 
-                    Spacer(modifier = GlanceModifier.height(4.dp))
+                    Spacer(modifier = GlanceModifier.height(5.dp))
 
                     Text(
-                        text = "🔔 $nextRem  ·  $pctStr%  ·  ${remaining}ml left",
+                        text = "$pctStr%  ·  ${remaining}ml left  ·  🔔 $nextRem",
                         maxLines = 1,
                         style = TextStyle(
-                            color = c.primary,
+                            color = c.textSub,
                             fontWeight = FontWeight.Medium,
-                            fontSize = 11.sp
+                            fontSize = 10.sp
                         )
                     )
                 }
 
-                Spacer(modifier = GlanceModifier.width(16.dp))
+                Spacer(modifier = GlanceModifier.width(14.dp))
 
-                // Right Side: 2x2 Grid of Quick Add Buttons
+                // ── Right: 2×2 Quick-add ──
                 Column(horizontalAlignment = Alignment.End) {
                     Row {
                         QuickAddBtn(100, c)
@@ -261,7 +286,7 @@ private fun QuickAddBtn(amount: Int, c: WidgetColors) {
             )
             .cornerRadius(8.dp)
             .background(c.card)
-            .padding(horizontal = 8.dp, vertical = 6.dp),
+            .padding(horizontal = 10.dp, vertical = 7.dp),
         contentAlignment = Alignment.Center
     ) {
         Text(

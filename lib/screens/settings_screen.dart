@@ -7,6 +7,8 @@ import '../widgets/app_button.dart';
 import '../widgets/top_snackbar.dart';
 import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
+import '../services/billing_service.dart';
+import 'premium_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -143,6 +145,66 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                     SizedBox(height: 20.h),
 
+                    // Premium banner
+                    Consumer<BillingService>(
+                      builder: (context, billing, _) {
+                        if (billing.isPremium) return const SizedBox.shrink();
+                        return Padding(
+                          padding: EdgeInsets.only(bottom: 20.h),
+                          child: GestureDetector(
+                            onTap: () {
+                              Navigator.push(context, MaterialPageRoute(builder: (_) => const PremiumScreen()));
+                            },
+                            child: Container(
+                              width: double.infinity,
+                              padding: EdgeInsets.all(20.w),
+                              decoration: BoxDecoration(
+                                gradient: c.primaryGradient,
+                                borderRadius: BorderRadius.circular(22.r),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: c.primary.withValues(alpha: 0.3),
+                                    blurRadius: 10,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
+                              ),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    padding: EdgeInsets.all(10.w),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withValues(alpha: 0.2),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Icon(Icons.workspace_premium_rounded, color: Colors.white, size: 28.w),
+                                  ),
+                                  SizedBox(width: 16.w),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'Upgrade to Aqua Pro',
+                                          style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.w800, color: Colors.white),
+                                        ),
+                                        SizedBox(height: 4.h),
+                                        Text(
+                                          'Unlock Widgets, Share Data & No Ads!',
+                                          style: TextStyle(fontSize: 12.sp, color: Colors.white.withValues(alpha: 0.9)),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  Icon(Icons.arrow_forward_ios_rounded, color: Colors.white, size: 16.w),
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+
                     // Hydration section
                     _sectionTitle('Hydration', c),
                     _buildCard(
@@ -239,12 +301,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     _buildCard(
                       c: c,
                       children: [
-                        _settingRow(
-                          c: c,
-                          emoji: '📤',
-                          label: 'Share Data',
-                          value: 'Select',
-                          onTap: () => _showShareSheet(context, provider),
+                        Consumer<BillingService>(
+                          builder: (context, billing, _) {
+                            return _settingRow(
+                              c: c,
+                              emoji: billing.isPremium ? '📤' : '🔒',
+                              label: 'Share Data',
+                              value: billing.isPremium ? 'Select' : 'Pro',
+                              onTap: () {
+                                if (billing.isPremium) {
+                                  _showShareSheet(context, provider);
+                                } else {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(builder: (_) => const PremiumScreen()),
+                                  );
+                                }
+                              },
+                            );
+                          },
                         ),
                         _settingRow(
                           c: c,

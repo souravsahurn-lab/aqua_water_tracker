@@ -6,6 +6,8 @@ import '../providers/hydration_provider.dart';
 import '../widgets/water_bottle.dart';
 import '../widgets/top_snackbar.dart';
 import '../widgets/live_permission_warning.dart';
+import '../services/billing_service.dart';
+import 'premium_screen.dart';
 import 'package:flutter/services.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -78,14 +80,41 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 color: context.colors.mutedLight,
                               ),
                             ),
-                            Text(
-                              userData.name.isNotEmpty ? userData.name : 'Friend',
-                              style: TextStyle(
-                                fontSize: 24.sp,
-                                fontWeight: FontWeight.w800,
-                                color: context.colors.primaryDark,
-                                letterSpacing: -0.5,
-                              ),
+                            Row(
+                              children: [
+                                Text(
+                                  userData.name.isNotEmpty ? userData.name : 'Friend',
+                                  style: TextStyle(
+                                    fontSize: 24.sp,
+                                    fontWeight: FontWeight.w800,
+                                    color: context.colors.primaryDark,
+                                    letterSpacing: -0.5,
+                                  ),
+                                ),
+                                // PRO badge
+                                Consumer<BillingService>(
+                                  builder: (context, billing, _) {
+                                    if (!billing.isPremium) return const SizedBox.shrink();
+                                    return Container(
+                                      margin: EdgeInsets.only(left: 8.w),
+                                      padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 3.h),
+                                      decoration: BoxDecoration(
+                                        gradient: context.colors.primaryGradient,
+                                        borderRadius: BorderRadius.circular(6.r),
+                                      ),
+                                      child: Text(
+                                        'PRO',
+                                        style: TextStyle(
+                                          fontSize: 9.sp,
+                                          fontWeight: FontWeight.w900,
+                                          color: Colors.white,
+                                          letterSpacing: 1,
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ],
                             ),
                             const LivePermissionWarning(),
                           ],
@@ -138,8 +167,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     child: _buildBottleHero(provider, pct, remaining, userData),
                   ),
 
-                  // ─── Pro Mockup Card ─────────────────────────────
-                  _buildProCard(context),
+                  // ─── Pro Card (hide when premium) ────────────────
+                  Consumer<BillingService>(
+                    builder: (context, billing, _) {
+                      if (billing.isPremium) return const SizedBox.shrink();
+                      return _buildProCard(context);
+                    },
+                  ),
 
                   // ─── Today's Log Inline Card ─────────────────────
                   Padding(
@@ -419,70 +453,75 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   // ═══════════════════════════════════════════════════════════════════
-  // Pro Mockup Card (Slim Professional Widget Promo)
+  // Pro Card — Upgrade to Aqua Pro
   // ═══════════════════════════════════════════════════════════════════
   Widget _buildProCard(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 8.h),
-      child: Container(
-        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              context.colors.warning.withValues(alpha: 0.15),
-              context.colors.warning.withValues(alpha: 0.05),
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(context, MaterialPageRoute(builder: (_) => const PremiumScreen()));
+      },
+      child: Padding(
+        padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 8.h),
+        child: Container(
+          padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                context.colors.primary.withValues(alpha: 0.12),
+                context.colors.primary.withValues(alpha: 0.04),
+              ],
+            ),
+            borderRadius: BorderRadius.circular(16.r),
+            border: Border.all(
+              color: context.colors.primary.withValues(alpha: 0.25),
+              width: 1.w,
+            ),
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: EdgeInsets.all(8.w),
+                decoration: BoxDecoration(
+                  gradient: context.colors.primaryGradient,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.workspace_premium_rounded,
+                  color: Colors.white,
+                  size: 18.sp,
+                ),
+              ),
+              SizedBox(width: 12.w),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Upgrade to Aqua Pro',
+                      style: TextStyle(
+                        fontSize: 13.sp,
+                        fontWeight: FontWeight.w800,
+                        color: context.colors.primary,
+                      ),
+                    ),
+                    SizedBox(height: 2.h),
+                    Text(
+                      'Widgets • Share Data • No Ads',
+                      style: TextStyle(
+                        fontSize: 10.sp,
+                        color: context.colors.mutedLight,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                Icons.chevron_right_rounded,
+                color: context.colors.primary,
+                size: 20.sp,
+              ),
             ],
           ),
-          borderRadius: BorderRadius.circular(16.r),
-          border: Border.all(
-            color: context.colors.warning.withValues(alpha: 0.3),
-            width: 1.w,
-          ),
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: EdgeInsets.all(8.w),
-              decoration: BoxDecoration(
-                color: context.colors.warning.withValues(alpha: 0.2),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                Icons.star_rounded,
-                color: context.colors.warning,
-                size: 18.sp,
-              ),
-            ),
-            SizedBox(width: 12.w),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Get Pro Widgets Unlocked',
-                    style: TextStyle(
-                      fontSize: 12.sp,
-                      fontWeight: FontWeight.w800,
-                      color: context.colors.warning,
-                    ),
-                  ),
-                  SizedBox(height: 2.h),
-                  Text(
-                    'Just at \$35 + Tax',
-                    style: TextStyle(
-                      fontSize: 10.sp,
-                      color: context.colors.mutedLight,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Icon(
-              Icons.chevron_right_rounded,
-              color: context.colors.warning,
-              size: 20.sp,
-            ),
-          ],
         ),
       ),
     );

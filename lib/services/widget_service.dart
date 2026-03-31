@@ -121,6 +121,11 @@ class WidgetService {
       await HomeWidget.saveWidgetData<int>('goal', userData.goal);
       await HomeWidget.saveWidgetData<int>('streak', displayStreak);
 
+      // Sync pro status for widgets
+      final mainPrefs = await SharedPreferences.getInstance();
+      final isPro = mainPrefs.getBool('isPremium') ?? false;
+      await HomeWidget.saveWidgetData<bool>('is_premium', isPro);
+
       int lastAddedMl = 0;
       if (logs != null && logs.isNotEmpty) {
         final todayStr = DateTime.now().toIso8601String().split('T')[0];
@@ -217,34 +222,75 @@ class WidgetService {
         await HomeWidget.saveWidgetData<String>('weekly_vals', weeklyVals.join(','));
         await HomeWidget.saveWidgetData<String>('weekly_labels_top', weeklyLabelsTop.join(','));
         await HomeWidget.saveWidgetData<String>('weekly_labels_bottom', weeklyLabelsBottom.join(','));
+        
+        // Sync historical goals for the last 7 days so widget colors are accurate
+        List<int> weeklyGoals = [];
+        for (int i = 6; i >= 0; i--) {
+           final targetDate = now.subtract(Duration(days: i));
+           final dateStr = targetDate.toIso8601String().split('T')[0];
+           weeklyGoals.add(userData.goalForDate(dateStr));
+        }
+        await HomeWidget.saveWidgetData<String>('weekly_goals', weeklyGoals.join(','));
       }
 
       // Next reminder
       String nextReminder = '--:--';
-      if (userData.customReminderTimes.isNotEmpty) {
-        final nowH = DateTime.now().hour;
-        final nowM = DateTime.now().minute;
-        for (var t in userData.customReminderTimes) {
+      
+      // Get all potential reminder times (custom or generated)
+      List<String> allTimes = List.from(userData.customReminderTimes);
+      
+      if (allTimes.isEmpty && userData.reminders) {
+        // Fallback or Smart Reminders: generate same slots as in ScheduleScreen
+        int wakeH = 7, sleepH = 22;
+        try {
+          wakeH = int.parse(userData.wakeTime.split(':')[0]);
+          sleepH = int.parse(userData.sleepTime.split(':')[0]);
+        } catch (_) {}
+        if (sleepH <= wakeH) sleepH += 24;
+        
+        final interval = userData.reminderIntervalMin;
+        DateTime temp = DateTime(2024, 1, 1, wakeH, 0);
+        DateTime limit = DateTime(2024, 1, 1, sleepH, 0);
+        
+        while (temp.isBefore(limit)) {
+          allTimes.add("${temp.hour.toString().padLeft(2, '0')}:${temp.minute.toString().padLeft(2, '0')}");
+          temp = temp.add(Duration(minutes: interval));
+        }
+      }
+
+      if (allTimes.isNotEmpty) {
+        final now = DateTime.now();
+        final nowMins = now.hour * 60 + now.minute;
+        
+        String? found;
+        int minAfter = 9999;
+        
+        for (var t in allTimes) {
           final parts = t.split(':');
           final h = int.tryParse(parts[0]) ?? 0;
           final m = int.tryParse(parts.length > 1 ? parts[1] : '0') ?? 0;
-          if (h > nowH || (h == nowH && m > nowM)) {
-            final hr = h == 0 ? 12 : (h > 12 ? h - 12 : h);
-            final min = m.toString().padLeft(2, '0');
-            final ampm = h < 12 ? 'AM' : 'PM';
-            nextReminder = '$hr:$min $ampm';
-            break;
+          final totalMins = h * 60 + m;
+          
+          if (totalMins > nowMins && totalMins < minAfter) {
+            minAfter = totalMins;
+            found = t;
           }
         }
-        if (nextReminder == '--:--') {
-          final t = userData.customReminderTimes.first;
-          final parts = t.split(':');
-          final h = int.tryParse(parts[0]) ?? 0;
-          final m = int.tryParse(parts.length > 1 ? parts[1] : '0') ?? 0;
-          final hr = h == 0 ? 12 : (h > 12 ? h - 12 : h);
-          final min = m.toString().padLeft(2, '0');
-          final ampm = h < 12 ? 'AM' : 'PM';
-          nextReminder = 'Tmr $hr:$min $ampm';
+        
+        if (found != null) {
+          final parts = found.split(':');
+          final h = int.parse(parts[0]);
+          final m = int.parse(parts[1]);
+          final displayH = h == 0 ? 12 : (h > 12 ? h - 12 : h);
+          nextReminder = "$displayH:${m.toString().padLeft(2, '0')} ${h < 12 ? 'AM' : 'PM'}";
+        } else {
+          // Wrap to tomorrow
+          final first = allTimes.first;
+          final parts = first.split(':');
+          final h = int.parse(parts[0]);
+          final m = int.parse(parts[1]);
+          final displayH = h == 0 ? 12 : (h > 12 ? h - 12 : h);
+          nextReminder = "Tmr $displayH:${m.toString().padLeft(2, '0')} ${h < 12 ? 'AM' : 'PM'}";
         }
       }
       await HomeWidget.saveWidgetData<String>('next_reminder', nextReminder);

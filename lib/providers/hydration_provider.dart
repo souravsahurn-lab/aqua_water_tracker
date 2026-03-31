@@ -110,6 +110,7 @@ class HydrationProvider extends ChangeNotifier with WidgetsBindingObserver {
     await prefs.setInt('setupStep', _setupStep);
     await prefs.setBool('isSetupComplete', _isSetupComplete);
     await prefs.setBool('remindersInitialized', _remindersInitialized);
+    _userData.recordTodayGoal(); // Ensure today's goal is recorded in history
     await WidgetService.updateWidgetData(_userData, logs: _logs);
   }
 
@@ -183,8 +184,10 @@ class HydrationProvider extends ChangeNotifier with WidgetsBindingObserver {
         _userData.streak = 0;
       }
       
+      _userData.recordTodayGoal(); // Record the goal of the day that just passed
       _userData.drunk = 0;
       _userData.lastActiveDate = today;
+      _userData.recordTodayGoal(); // Also record for the new day
       _saveToPrefs();
     }
   }
@@ -438,6 +441,19 @@ class HydrationProvider extends ChangeNotifier with WidgetsBindingObserver {
     }
   }
 
+  /// Returns goals for the last 7 days (used for color coding bars)
+  List<int> getWeeklyGoals() {
+    List<int> goals = [];
+    final now = DateTime.now();
+    final diff = now.weekday == 7 ? 0 : now.weekday;
+    final sunday = now.subtract(Duration(days: diff));
+    for (int i = 0; i < 7; i++) {
+      final d = sunday.add(Duration(days: i)).toIso8601String().split('T')[0];
+      goals.add(_userData.goalForDate(d));
+    }
+    return goals;
+  }
+
   /// Average daily intake for the given period
   int getAverageIntake(String period) {
     final data = getBarData(period);
@@ -468,7 +484,7 @@ class HydrationProvider extends ChangeNotifier with WidgetsBindingObserver {
       for (int i = 0; i < 7; i++) {
         final d = sunday.add(Duration(days: i)).toIso8601String().split('T')[0];
         final sum = _logs.where((l) => l.date == d).fold(0, (p, c) => p + c.ml);
-        if (sum >= _userData.goal) hit++;
+        if (sum >= _userData.goalForDate(d)) hit++;
       }
       return '$hit/7';
     } else {
@@ -479,7 +495,7 @@ class HydrationProvider extends ChangeNotifier with WidgetsBindingObserver {
         final d = now.subtract(Duration(days: 29 - i)).toIso8601String().split('T')[0];
         final sum = _logs.where((l) => l.date == d).fold(0, (p, c) => p + c.ml);
         if (sum > 0) total++;
-        if (sum >= _userData.goal) hit++;
+        if (sum >= _userData.goalForDate(d)) hit++;
       }
       return '$hit/${total > 0 ? total : 30}';
     }
@@ -548,9 +564,10 @@ class HydrationProvider extends ChangeNotifier with WidgetsBindingObserver {
     for (int i = 0; i < 7; i++) {
       final d = now.subtract(Duration(days: i)).toIso8601String().split('T')[0];
       final sum = _logs.where((l) => l.date == d).fold(0, (p, c) => p + c.ml);
-      final pctDay = _userData.goal > 0 ? (sum / _userData.goal * 100).clamp(0, 100) : 0;
+      final dayGoal = _userData.goalForDate(d);
+      final pctDay = dayGoal > 0 ? (sum / dayGoal * 100).clamp(0, 100) : 0;
       totalCompletionPct += pctDay;
-      if (sum >= _userData.goal) daysMetGoal++;
+      if (sum >= dayGoal) daysMetGoal++;
     }
 
     // Consistency: what % of last 7 days goal was met (0-40 points)
@@ -600,7 +617,7 @@ class HydrationProvider extends ChangeNotifier with WidgetsBindingObserver {
       if (dayDate.isAfter(now)) {
         status.add(false);
       } else {
-        status.add(sum >= _userData.goal);
+        status.add(sum >= _userData.goalForDate(d));
       }
     }
     return status;
@@ -808,6 +825,7 @@ class HydrationProvider extends ChangeNotifier with WidgetsBindingObserver {
   void updateGoal(int goal) {
     _userData.goal = goal;
     _userData.customGoal = true;
+    _userData.recordTodayGoal(); // Record immediately when updated
     _updateReminders(); // smart reminders depend on goal
     _saveToPrefs();
     notifyListeners();

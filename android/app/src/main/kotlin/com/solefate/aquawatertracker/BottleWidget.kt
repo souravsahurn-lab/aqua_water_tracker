@@ -108,17 +108,35 @@ class BottleWidget : GlanceAppWidget() {
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         provideContent {
             val c = dynamicColors
-            val completedColor = ColorProvider(Color(0xFF22C55E)) // Green for completed
+            val completedColor = ColorProvider(Color(0xFF22C55E))
             val state = currentState<HomeWidgetGlanceState>()
             val prefs = state.preferences
+
+            val isPremium = prefs.getBoolean("is_premium", false)
+            if (!isPremium) {
+                Box(
+                    modifier = GlanceModifier.fillMaxSize().cornerRadius(24.dp).background(c.bg).padding(16.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(text = "🔒", style = TextStyle(fontSize = 28.sp))
+                        Spacer(modifier = GlanceModifier.height(8.dp))
+                        Text(text = "Aqua Pro Required", style = TextStyle(color = c.textMain, fontWeight = FontWeight.Bold, fontSize = 14.sp))
+                        Spacer(modifier = GlanceModifier.height(4.dp))
+                        Text(text = "Upgrade to unlock widgets", style = TextStyle(color = c.textSub, fontSize = 11.sp))
+                    }
+                }
+                return@provideContent
+            }
 
             val intake = prefs.getInt("intake", 0)
             val goal = prefs.getInt("goal", 2450).coerceAtLeast(1)
             val streak = prefs.getInt("streak", 0)
-            val nextReminder = prefs.getString("next_reminder", "--:--") ?: "--:--"
 
             val progress = (intake.toFloat() / goal.toFloat()).coerceIn(0f, 1f)
+            val pctStr = String.format("%.0f", progress * 100)
             val isCompleted = intake >= goal
+            val intakeColor = if (isCompleted) completedColor else c.textMain
 
             Column(
                 modifier = GlanceModifier
@@ -128,59 +146,55 @@ class BottleWidget : GlanceAppWidget() {
                     .padding(12.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Header (Intake/Goal & Streak)
+                // ── Header ──
                 Row(
                     modifier = GlanceModifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column(modifier = GlanceModifier.defaultWeight()) {
+                        Row(verticalAlignment = Alignment.Bottom) {
+                            Text(
+                                text = "$intake",
+                                maxLines = 1,
+                                style = TextStyle(
+                                    color = intakeColor,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 20.sp
+                                )
+                            )
+                            Text(
+                                text = "/$goal",
+                                maxLines = 1,
+                                style = TextStyle(
+                                    color = c.textSub,
+                                    fontWeight = FontWeight.Medium,
+                                    fontSize = 10.sp
+                                ),
+                                modifier = GlanceModifier.padding(bottom = 3.dp, start = 2.dp)
+                            )
+                        }
                         Text(
-                            text = "$intake",
+                            text = "$pctStr%  ·  \uD83D\uDD25 $streak",
                             maxLines = 1,
-                            style = TextStyle(color = c.textMain, fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                        )
-                        Text(
-                            text = "/ $goal ml",
-                            maxLines = 1,
-                            style = TextStyle(color = c.textSub, fontWeight = FontWeight.Medium, fontSize = 11.sp)
-                        )
-                        Text(
-                            text = "🔔 $nextReminder",
-                            maxLines = 1,
-                            style = TextStyle(color = c.primary, fontWeight = FontWeight.Medium, fontSize = 10.sp),
+                            style = TextStyle(
+                                color = c.textSub,
+                                fontWeight = FontWeight.Medium,
+                                fontSize = 10.sp
+                            ),
                             modifier = GlanceModifier.padding(top = 2.dp)
                         )
                     }
-                    val canUndo = prefs.getInt("last_added_ml", 0) > 0
-                    if (canUndo) {
-                        Box(
-                            modifier = GlanceModifier
-                                .clickable(actionRunCallback<UndoBottleWaterAction>())
-                                .cornerRadius(8.dp)
-                                .background(c.card)
-                                .padding(horizontal = 6.dp, vertical = 4.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text("↺", style = TextStyle(color = c.primary, fontWeight = FontWeight.Bold, fontSize = 12.sp))
-                        }
-                        Spacer(modifier = GlanceModifier.width(6.dp))
-                    }
-                    Text(
-                        text = "\uD83D\uDD25 $streak",
-                        maxLines = 1,
-                        style = TextStyle(color = c.streak, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                    )
                 }
 
                 Spacer(modifier = GlanceModifier.height(8.dp))
 
-                // The Bottle
-                val bottleHeight = 84f
+                // ── Bottle ──
+                val bottleHeight = 80f
                 Box(
                     modifier = GlanceModifier
-                        .width(60.dp)
+                        .width(64.dp)
                         .height(bottleHeight.dp)
-                        .cornerRadius(12.dp)
+                        .cornerRadius(14.dp)
                         .background(c.card),
                     contentAlignment = Alignment.BottomCenter
                 ) {
@@ -188,52 +202,52 @@ class BottleWidget : GlanceAppWidget() {
                         modifier = GlanceModifier
                             .fillMaxWidth()
                             .height((bottleHeight * progress).dp)
-                            .cornerRadius(8.dp)
+                            .cornerRadius(10.dp)
                             .background(if (isCompleted) completedColor else c.primary)
                     ) {}
                 }
 
                 Spacer(modifier = GlanceModifier.defaultWeight())
 
-                // 2x2 Quick Add Buttons Grid
+                // ── 2×2 Quick-add ──
                 Column(modifier = GlanceModifier.fillMaxWidth()) {
                     Row(modifier = GlanceModifier.fillMaxWidth()) {
                         listOf(100, 250).forEachIndexed { i, amt ->
-                            if (i > 0) Spacer(modifier = GlanceModifier.width(6.dp))
+                            if (i > 0) Spacer(modifier = GlanceModifier.width(5.dp))
                             Box(
                                 modifier = GlanceModifier
                                     .defaultWeight()
                                     .clickable(actionRunCallback<AddBottleWaterAction>(actionParametersOf(amountKey to amt)))
-                                    .cornerRadius(10.dp)
+                                    .cornerRadius(8.dp)
                                     .background(c.card)
-                                    .padding(vertical = 8.dp),
+                                    .padding(vertical = 7.dp),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
                                     text = "+$amt",
                                     maxLines = 1,
-                                    style = TextStyle(color = c.primary, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                                    style = TextStyle(color = c.primary, fontWeight = FontWeight.Bold, fontSize = 12.sp)
                                 )
                             }
                         }
                     }
-                    Spacer(modifier = GlanceModifier.height(6.dp))
+                    Spacer(modifier = GlanceModifier.height(5.dp))
                     Row(modifier = GlanceModifier.fillMaxWidth()) {
                         listOf(300, 500).forEachIndexed { i, amt ->
-                            if (i > 0) Spacer(modifier = GlanceModifier.width(6.dp))
+                            if (i > 0) Spacer(modifier = GlanceModifier.width(5.dp))
                             Box(
                                 modifier = GlanceModifier
                                     .defaultWeight()
                                     .clickable(actionRunCallback<AddBottleWaterAction>(actionParametersOf(amountKey to amt)))
-                                    .cornerRadius(10.dp)
+                                    .cornerRadius(8.dp)
                                     .background(c.card)
-                                    .padding(vertical = 8.dp),
+                                    .padding(vertical = 7.dp),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
                                     text = "+$amt",
                                     maxLines = 1,
-                                    style = TextStyle(color = c.primary, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                                    style = TextStyle(color = c.primary, fontWeight = FontWeight.Bold, fontSize = 12.sp)
                                 )
                             }
                         }

@@ -2,10 +2,13 @@
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
     android:minWidth="110dp"
     android:minHeight="110dp"
-    android:updatePeriodMillis="0"
-    android:initialLayout="@layout/widget_loading"
+    android:targetCellWidth="2"
+    android:targetCellHeight="2"
+    android:maxResizeWidth="250dp"
+    android:maxResizeHeight="250dp"
+    android:previewImage="@mipmap/ic_launcher"
+    android:description="@string/grid_widget_description"
     android:resizeMode="horizontal|vertical"
     android:widgetCategory="home_screen"
-    android:targetCellWidth="2"
-    android:targetCellHeight="2">
-</appwidget-provider>
+    android:updatePeriodMillis="1800000"
+    android:initialLayout="@layout/widget_loading" />

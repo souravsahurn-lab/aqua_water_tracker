@@ -10,6 +10,7 @@ class SimpleBarChart extends StatefulWidget {
   /// If provided, bars scale relative to this value (e.g. daily goal).
   /// A bar reaching this value = 100% height. Bars can exceed 100%.
   final double? referenceMax;
+  final List<Color>? barColors;
 
   const SimpleBarChart({
     super.key,
@@ -18,6 +19,7 @@ class SimpleBarChart extends StatefulWidget {
     this.highlightIndex = -1,
     this.totalLabel,
     this.referenceMax,
+    this.barColors,
   });
 
   @override
@@ -153,29 +155,38 @@ class _SimpleBarChartState extends State<SimpleBarChart>
                                     ),
                                   ),
                                 ),
-                              Container(
+                               Container(
                                 height: barHeight,
                                 decoration: BoxDecoration(
-                                  gradient: isGoalMet
+                                  gradient: widget.barColors != null && i < widget.barColors!.length
                                       ? LinearGradient(
                                           begin: Alignment.topCenter,
                                           end: Alignment.bottomCenter,
                                           colors: [
-                                            context.colors.success.withValues(alpha: 0.7),
-                                            context.colors.success,
+                                            widget.barColors![i].withValues(alpha: 0.7),
+                                            widget.barColors![i],
                                           ],
                                         )
-                                      : (isHighlighted
+                                      : (isGoalMet
                                           ? LinearGradient(
                                               begin: Alignment.topCenter,
                                               end: Alignment.bottomCenter,
                                               colors: [
-                                                context.colors.seafoam,
-                                                context.colors.primary,
+                                                context.colors.success.withValues(alpha: 0.7),
+                                                context.colors.success,
                                               ],
                                             )
-                                          : null),
-                                  color: (isGoalMet || isHighlighted)
+                                          : (isHighlighted
+                                              ? LinearGradient(
+                                                  begin: Alignment.topCenter,
+                                                  end: Alignment.bottomCenter,
+                                                  colors: [
+                                                    context.colors.seafoam,
+                                                    context.colors.primary,
+                                                  ],
+                                                )
+                                              : null)),
+                                  color: (isGoalMet || isHighlighted || (widget.barColors != null && i < widget.barColors!.length))
                                       ? null
                                       : widget.data[i] > 0
                                           ? context.colors.primary.withValues(alpha: 0.25)
@@ -184,10 +195,12 @@ class _SimpleBarChartState extends State<SimpleBarChart>
                                     top: Radius.circular(4.r),
                                     bottom: Radius.circular(2.r),
                                   ),
-                                  boxShadow: (isGoalMet || isHighlighted)
+                                  boxShadow: (isGoalMet || isHighlighted || (widget.barColors != null && i < widget.barColors!.length))
                                       ? [
                                           BoxShadow(
-                                            color: (isGoalMet ? context.colors.success : context.colors.primary).withValues(alpha: 0.25),
+                                            color: (widget.barColors != null && i < widget.barColors!.length 
+                                                    ? widget.barColors![i] 
+                                                    : (isGoalMet ? context.colors.success : context.colors.primary)).withValues(alpha: 0.25),
                                             blurRadius: 10,
                                             offset: const Offset(0, 3),
                                           )

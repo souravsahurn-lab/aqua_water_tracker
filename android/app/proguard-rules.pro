@@ -21,14 +21,51 @@
 -keep class * extends com.google.gson.reflect.TypeToken
 -keep,allowobfuscation,allowshrinking class * extends com.google.gson.reflect.TypeToken
 
-# ── Jetpack Glance App Widget ──
--keep class com.solefate.aquawatertracker.WaterWidget { *; }
--keep class com.solefate.aquawatertracker.WaterWidgetReceiver { *; }
--keep class com.solefate.aquawatertracker.AddWaterAction { *; }
+# ── Jetpack Glance App Widgets (keep ALL widgets + receivers + actions) ──
 -keep class * extends androidx.glance.appwidget.GlanceAppWidget { *; }
 -keep class * extends androidx.glance.appwidget.GlanceAppWidgetReceiver { *; }
 -keep class * implements androidx.glance.appwidget.action.ActionCallback { *; }
 
-# ── home_widget plugin ──
--keep class es.antonborri.home_widget.** { *; }
+# Explicit keep for every widget class (belt-and-suspenders for R8 full mode)
+-keep class com.solefate.aquawatertracker.WaterWidget { *; }
+-keep class com.solefate.aquawatertracker.WaterWidgetReceiver { *; }
+-keep class com.solefate.aquawatertracker.AddWaterAction { *; }
+-keep class com.solefate.aquawatertracker.UndoWaterAction { *; }
+
+-keep class com.solefate.aquawatertracker.HourlyWidget { *; }
+-keep class com.solefate.aquawatertracker.HourlyWidgetReceiver { *; }
+-keep class com.solefate.aquawatertracker.AddHourlyWaterAction { *; }
+-keep class com.solefate.aquawatertracker.UndoHourlyWaterAction { *; }
+
+-keep class com.solefate.aquawatertracker.WeeklyWidget { *; }
+-keep class com.solefate.aquawatertracker.WeeklyWidgetReceiver { *; }
+-keep class com.solefate.aquawatertracker.AddWeeklyWaterAction { *; }
+-keep class com.solefate.aquawatertracker.UndoWeeklyWaterAction { *; }
+
+-keep class com.solefate.aquawatertracker.BottleWidget { *; }
+-keep class com.solefate.aquawatertracker.BottleWidgetReceiver { *; }
+-keep class com.solefate.aquawatertracker.AddBottleWaterAction { *; }
+-keep class com.solefate.aquawatertracker.UndoBottleWaterAction { *; }
+
+-keep class com.solefate.aquawatertracker.GridWidget { *; }
+-keep class com.solefate.aquawatertracker.GridWidgetReceiver { *; }
+-keep class com.solefate.aquawatertracker.AddGridWaterAction { *; }
+-keep class com.solefate.aquawatertracker.UndoGridWaterAction { *; }
+
+# Keep shared WidgetColors data class
+-keep class com.solefate.aquawatertracker.WidgetColors { *; }
+
+# ── Flutter In-App Purchase ──
+-keep class com.android.billingclient.api.** { *; }
+
+# ── Google Mobile Ads ──
+-keep class com.google.android.gms.ads.** { *; }
+-keep class com.google.ads.mediation.** { *; }
+-keep class com.google.android.gms.internal.ads.** { *; }
+-dontwarn com.google.android.gms.ads.**
+-dontwarn com.google.ads.mediation.**
+
+# ── Metadata and Resources ──
+-keepattributes Signature, *Annotation*, EnclosingMethod, InnerClasses
+-keep class com.solefate.aquawatertracker.** { *; }
 

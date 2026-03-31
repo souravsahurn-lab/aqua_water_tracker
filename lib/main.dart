@@ -3,6 +3,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'theme/app_theme.dart';
 import 'providers/hydration_provider.dart';
 import 'services/notification_service.dart';
@@ -11,12 +12,14 @@ import 'screens/splash_screen.dart';
 import 'screens/onboarding_screen.dart';
 import 'screens/setup_screen.dart';
 import 'screens/home_screen.dart';
+import 'services/billing_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
   await NotificationService().init();
   await WidgetService.initialize();
+  await MobileAds.instance.initialize();
 
   // Use edgeToEdge as the primary mode to prevent 'black bar' glitches
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
@@ -40,8 +43,11 @@ class AquaApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => HydrationProvider(),
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => HydrationProvider()),
+        ChangeNotifierProvider(create: (_) => BillingService()..init()),
+      ],
       child: ScreenUtilInit(
         designSize: Size(390, 844),
         minTextAdapt: true,

@@ -20,6 +20,7 @@ class UserData {
   bool smartReminders;
   bool customGoal;
   List<String> customReminderTimes; // HH:mm strings for manual reminders
+  Map<String, int> dailyGoals; // date string → goal for that day
 
   UserData({
     this.name = '',
@@ -43,8 +44,31 @@ class UserData {
     this.smartReminders = true,
     this.customGoal = false,
     List<String>? customReminderTimes,
+    Map<String, int>? dailyGoals,
   })  : lastActiveDate = lastActiveDate ?? DateTime.now().toIso8601String().split('T')[0],
-        customReminderTimes = customReminderTimes ?? [];
+        customReminderTimes = customReminderTimes ?? [],
+        dailyGoals = dailyGoals ?? {};
+
+  /// Returns the goal that was active on a given date.
+  /// Falls back to the current goal if no historical record exists.
+  int goalForDate(String dateStr) {
+    return dailyGoals[dateStr] ?? goal;
+  }
+
+  /// Records today's goal in the history.
+  void recordTodayGoal() {
+    final today = DateTime.now().toIso8601String().split('T')[0];
+    dailyGoals[today] = goal;
+    // Prune entries older than 60 days to avoid unbounded growth
+    final cutoff = DateTime.now().subtract(const Duration(days: 60));
+    dailyGoals.removeWhere((date, _) {
+      try {
+        return DateTime.parse(date).isBefore(cutoff);
+      } catch (_) {
+        return true;
+      }
+    });
+  }
 
   /// Calculates recommended daily water intake in ml
   /// Formula:
@@ -129,6 +153,9 @@ class UserData {
               ?.map((e) => e as String)
               .toList() ??
           [],
+      dailyGoals: (json['dailyGoals'] as Map<String, dynamic>?)
+              ?.map((k, v) => MapEntry(k, (v as num).toInt())) ??
+          {},
     );
   }
 
@@ -155,6 +182,7 @@ class UserData {
       'smartReminders': smartReminders,
       'customGoal': customGoal,
       'customReminderTimes': customReminderTimes,
+      'dailyGoals': dailyGoals,
     };
   }
 }

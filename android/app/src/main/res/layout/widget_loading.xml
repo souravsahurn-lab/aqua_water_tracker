@@ -2,13 +2,13 @@
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#0F172A">
+    android:background="?android:attr/colorBackground">
 
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center"
-        android:text="Loading..."
-        android:textColor="#38BDF8"
+        android:text="Loading…"
+        android:textColor="?android:attr/textColorSecondary"
         android:textSize="14sp" />
 </FrameLayout>
