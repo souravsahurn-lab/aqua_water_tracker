@@ -11,6 +11,9 @@ class BillingService extends ChangeNotifier {
   bool _isPremium = false;
   bool get isPremium => _isPremium;
 
+  String? _purchaseDate;
+  String? get purchaseDate => _purchaseDate;
+
   List<ProductDetails> _products = [];
   List<ProductDetails> get products => _products;
 
@@ -23,6 +26,7 @@ class BillingService extends ChangeNotifier {
   Future<void> init() async {
     final prefs = await SharedPreferences.getInstance();
     _isPremium = prefs.getBool('isPremium') ?? false;
+    _purchaseDate = prefs.getString('purchaseDate');
 
     _subscription = _inAppPurchase.purchaseStream.listen(
       _onPurchaseUpdate,
@@ -88,11 +92,19 @@ class BillingService extends ChangeNotifier {
   }
 
   Future<void> _grantPremium() async {
+    final prefs = await SharedPreferences.getInstance();
     if (!_isPremium) {
       _isPremium = true;
-      final prefs = await SharedPreferences.getInstance();
       await prefs.setBool('isPremium', true);
       
+      // Store purchase date if not set
+      if (prefs.getString('purchaseDate') == null) {
+        _purchaseDate = DateTime.now().toIso8601String();
+        await prefs.setString('purchaseDate', _purchaseDate!);
+      } else {
+        _purchaseDate = prefs.getString('purchaseDate');
+      }
+
       // Update widgets immediately to unlock and populate them
       await WidgetService.syncFullWidgetData();
       

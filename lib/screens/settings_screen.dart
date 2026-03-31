@@ -8,6 +8,7 @@ import '../widgets/top_snackbar.dart';
 import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:intl/intl.dart';
 import '../services/billing_service.dart';
 import 'premium_screen.dart';
 
@@ -149,7 +150,74 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     // Premium banner
                     Consumer<BillingService>(
                       builder: (context, billing, _) {
-                        if (billing.isPremium) return const SizedBox.shrink();
+                        if (billing.isPremium) {
+                          return Padding(
+                            padding: EdgeInsets.only(bottom: 20.h),
+                            child: GestureDetector(
+                              onTap: () => _showProDetails(context, billing.purchaseDate ?? ''),
+                              child: Container(
+                                width: double.infinity,
+                                padding: EdgeInsets.all(20.w),
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    colors: [Color(0xFF0F172A), Color(0xFF1E293B)],
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                  ),
+                                  borderRadius: BorderRadius.circular(22.r),
+                                  border: Border.all(color: Colors.amber.withValues(alpha: 0.3), width: 1.5),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withValues(alpha: 0.1),
+                                      blurRadius: 10,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ],
+                                ),
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      padding: EdgeInsets.all(10.w),
+                                      decoration: BoxDecoration(
+                                        color: Colors.amber.withValues(alpha: 0.15),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: Icon(Icons.stars_rounded, color: Colors.amber, size: 28.w),
+                                    ),
+                                    SizedBox(width: 16.w),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            'Aqua Pro Activated',
+                                            style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.w800, color: Colors.white),
+                                          ),
+                                          SizedBox(height: 4.h),
+                                          Text(
+                                            'Premium features unlocked ✨',
+                                            style: TextStyle(fontSize: 12.sp, color: Colors.white.withValues(alpha: 0.7)),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    Container(
+                                      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
+                                      decoration: BoxDecoration(
+                                        color: Colors.amber.withValues(alpha: 0.2),
+                                        borderRadius: BorderRadius.circular(10.r),
+                                      ),
+                                      child: Text(
+                                        'ACTIVE',
+                                        style: TextStyle(fontSize: 10.sp, fontWeight: FontWeight.w900, color: Colors.amber),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          );
+                        }
                         return Padding(
                           padding: EdgeInsets.only(bottom: 20.h),
                           child: GestureDetector(
@@ -979,6 +1047,120 @@ class _SettingsScreenState extends State<SettingsScreen> {
   // ═══════════════════════════════════════════════════════════════════
   // UI Helpers
   // ═══════════════════════════════════════════════════════════════════
+
+  void _showProDetails(BuildContext context, String purchaseDateIso) {
+    DateTime? date;
+    try {
+      if (purchaseDateIso.isNotEmpty) {
+        date = DateTime.parse(purchaseDateIso);
+      }
+    } catch (_) {}
+    final dateStr = date != null ? DateFormat('MMM dd, yyyy').format(date) : 'Recently';
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: context.colors.card,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28.r)),
+        contentPadding: EdgeInsets.zero,
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: double.infinity,
+              padding: EdgeInsets.all(30.w),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Color(0xFF0F172A), Color(0xFF1E293B)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.vertical(top: Radius.circular(28.r)),
+              ),
+              child: Column(
+                children: [
+                  Icon(Icons.workspace_premium_rounded, color: Colors.amber, size: 60.sp),
+                  SizedBox(height: 16.h),
+                  Text('Aqua Pro', style: TextStyle(fontSize: 24.sp, fontWeight: FontWeight.w900, color: Colors.white)),
+                  Text('Lifetime License', style: TextStyle(fontSize: 14.sp, color: Colors.white.withValues(alpha: 0.6))),
+                ],
+              ),
+            ),
+            Padding(
+              padding: EdgeInsets.all(24.w),
+              child: Column(
+                children: [
+                  _proFeatureRow(context, Icons.widgets_rounded, 'Home Screen Widgets', 'Full access to all sizes & styles'),
+                  _proFeatureRow(context, Icons.share_rounded, 'Advanced Sharing', 'CSV & PDF hydration reports'),
+                  _proFeatureRow(context, Icons.do_not_disturb_on_rounded, 'No Advertisements', '100% clean and focused experience'),
+                  _proFeatureRow(context, Icons.sync_rounded, 'Priority Sync', 'Instant widget & data updates'),
+                  Divider(height: 32.h, color: context.colors.softLight),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('Status:', style: TextStyle(fontSize: 13.sp, color: context.colors.mutedLight)),
+                      Text('Active', style: TextStyle(fontSize: 13.sp, fontWeight: FontWeight.w800, color: Colors.green)),
+                    ],
+                  ),
+                  SizedBox(height: 8.h),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('Activated On:', style: TextStyle(fontSize: 13.sp, color: context.colors.mutedLight)),
+                      Text(dateStr, style: TextStyle(fontSize: 13.sp, fontWeight: FontWeight.w700, color: context.colors.text)),
+                    ],
+                  ),
+                  SizedBox(height: 24.h),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50.h,
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: context.colors.primary,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.r)),
+                        elevation: 0,
+                      ),
+                      child: Text('Great!', style: TextStyle(fontWeight: FontWeight.w800)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _proFeatureRow(BuildContext context, IconData icon, String title, String desc) {
+    return Padding(
+      padding: EdgeInsets.only(bottom: 16.h),
+      child: Row(
+        children: [
+          Container(
+            padding: EdgeInsets.all(8.w),
+            decoration: BoxDecoration(
+              color: context.colors.primary.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(10.r),
+            ),
+            child: Icon(icon, color: context.colors.primary, size: 20.sp),
+          ),
+          SizedBox(width: 14.w),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: TextStyle(fontSize: 14.sp, fontWeight: FontWeight.w700, color: context.colors.text)),
+                Text(desc, style: TextStyle(fontSize: 11.sp, color: context.colors.mutedLight)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   Widget _sectionTitle(String title, AppColors c) {
     return Padding(
