@@ -4,24 +4,27 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
-import 'package:flutter_native_splash/flutter_native_splash.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'theme/app_theme.dart';
 import 'providers/hydration_provider.dart';
 import 'services/notification_service.dart';
 import 'services/widget_service.dart';
-import 'screens/splash_screen.dart';
 import 'screens/onboarding_screen.dart';
 import 'screens/setup_screen.dart';
 import 'screens/home_screen.dart';
 import 'services/billing_service.dart';
 
 void main() async {
-  WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
-  FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
+  WidgetsFlutterBinding.ensureInitialized();
   
-  await NotificationService().init();
-  await WidgetService.initialize();
-  await MobileAds.instance.initialize();
+  // Non-blocking initialization of heavy services
+  NotificationService().init();
+  WidgetService.initialize();
+  MobileAds.instance.initialize();
+
+  // Fast-read setup status to decide initial route
+  final prefs = await SharedPreferences.getInstance();
+  final isSetupComplete = prefs.getBool('isSetupComplete') ?? false;
 
   // Use edgeToEdge as the primary mode to prevent 'black bar' glitches
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
@@ -37,11 +40,12 @@ void main() async {
       systemStatusBarContrastEnforced: false,
     ),
   );
-  runApp(AquaApp());
+  runApp(AquaApp(isSetupComplete: isSetupComplete));
 }
 
 class AquaApp extends StatelessWidget {
-  const AquaApp({super.key});
+  final bool isSetupComplete;
+  const AquaApp({super.key, required this.isSetupComplete});
 
   @override
   Widget build(BuildContext context) {
@@ -84,9 +88,8 @@ class AquaApp extends StatelessWidget {
                   ),
                   extensions: [appColors],
                 ),
-                initialRoute: '/splash',
+                initialRoute: isSetupComplete ? '/home' : '/onboarding',
                 routes: {
-                  '/splash': (context) => SplashScreen(),
                   '/onboarding': (context) => OnboardingScreen(),
                   '/setup': (context) => SetupScreen(),
                   '/home': (context) => HomeScreen(),
