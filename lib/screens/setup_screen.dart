@@ -400,6 +400,7 @@ class SetupScreen extends StatelessWidget {
     final genders = [
       {'val': 'male', 'emoji': '👨', 'label': 'Male'},
       {'val': 'female', 'emoji': '👩', 'label': 'Female'},
+      {'val': 'other', 'emoji': '🧑', 'label': 'Other'},
     ];
 
     return Row(
@@ -407,12 +408,12 @@ class SetupScreen extends StatelessWidget {
         final isSelected = provider.userData.gender == g['val'];
         return Expanded(
           child: Padding(
-            padding: EdgeInsets.symmetric(horizontal: 7.w),
+            padding: EdgeInsets.symmetric(horizontal: 5.w),
             child: GestureDetector(
               onTap: () => provider.updateGender(g['val']!),
               child: AnimatedContainer(
                 duration: Duration(milliseconds: 200),
-                padding: EdgeInsets.symmetric(vertical: 28.h, horizontal: 12.w),
+                padding: EdgeInsets.symmetric(vertical: 24.h, horizontal: 8.w),
                 decoration: BoxDecoration(
                   color: isSelected ? null : context.colors.card,
                   gradient: isSelected
@@ -442,26 +443,26 @@ class SetupScreen extends StatelessWidget {
                 ),
                 child: Column(
                   children: [
-                    Text(g['emoji']!, style: TextStyle(fontSize: 40.sp)),
-                    SizedBox(height: 10.h),
+                    Text(g['emoji']!, style: TextStyle(fontSize: 36.sp)),
+                    SizedBox(height: 8.h),
                     Text(
                       g['label']!,
                       style: TextStyle(
-                        fontSize: 15.sp,
+                        fontSize: 14.sp,
                         fontWeight: FontWeight.w700,
                         color: isSelected ? context.colors.primary : context.colors.text,
                       ),
                     ),
                     if (isSelected) ...[
-                      SizedBox(height: 10.h),
+                      SizedBox(height: 8.h),
                       Container(
-                        width: 22.w,
-                        height: 22.h,
+                        width: 20.w,
+                        height: 20.h,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           gradient: context.colors.primaryGradient,
                         ),
-                        child: Icon(Icons.check, size: 12, color: Colors.white),
+                        child: Icon(Icons.check, size: 11, color: Colors.white),
                       ),
                     ],
                   ],
@@ -622,6 +623,7 @@ class _StatsStepWidgetState extends State<_StatsStepWidget> {
   @override
   void initState() {
     super.initState();
+    weightUnit = widget.provider.userData.weightUnit;
     ageCtrl = TextEditingController(text: '${widget.provider.userData.age}');
     weightCtrl = TextEditingController(
       text: '${widget.provider.userData.weight}',
@@ -644,6 +646,7 @@ class _StatsStepWidgetState extends State<_StatsStepWidget> {
     if (w != null && w > 0) {
       final kg = weightUnit == 'lbs' ? (w / 2.20462).round() : w.round();
       widget.provider.updateWeight(kg);
+      widget.provider.updateWeightUnit(weightUnit);
     }
   }
 

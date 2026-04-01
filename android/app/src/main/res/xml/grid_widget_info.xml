@@ -6,7 +6,7 @@
     android:targetCellHeight="2"
     android:maxResizeWidth="250dp"
     android:maxResizeHeight="250dp"
-    android:previewImage="@mipmap/ic_launcher"
+    android:previewImage="@drawable/preview_grid"
     android:description="@string/grid_widget_description"
     android:resizeMode="horizontal|vertical"
     android:widgetCategory="home_screen"

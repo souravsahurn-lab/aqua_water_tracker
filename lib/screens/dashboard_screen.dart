@@ -9,6 +9,7 @@ import '../widgets/live_permission_warning.dart';
 import '../services/billing_service.dart';
 import 'premium_screen.dart';
 import 'package:flutter/services.dart';
+import '../utils/time_utils.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -1121,7 +1122,7 @@ class _LogsBottomSheet extends StatelessWidget {
                                     ),
                                     SizedBox(height: 2.h),
                                     Text(
-                                      log.time,
+                                      TimeUtils.formatString(log.time, provider.userData.is24HourFormat),
                                       style: TextStyle(
                                         fontSize: 11.sp,
                                         color: context.colors.mutedLight,

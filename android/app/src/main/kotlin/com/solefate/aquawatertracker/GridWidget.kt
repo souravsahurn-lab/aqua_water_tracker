@@ -1,6 +1,7 @@
 package com.solefate.aquawatertracker
 
 import android.content.Context
+import android.appwidget.AppWidgetManager
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -32,6 +33,7 @@ import androidx.glance.action.actionParametersOf
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.action.ActionCallback
 import androidx.glance.appwidget.action.actionRunCallback
+import androidx.glance.appwidget.updateAll
 import es.antonborri.home_widget.HomeWidgetBackgroundIntent
 import es.antonborri.home_widget.HomeWidgetPlugin
 import es.antonborri.home_widget.HomeWidgetGlanceState
@@ -47,26 +49,37 @@ class UndoGridWaterAction : ActionCallback {
         parameters: ActionParameters
     ) {
         val prefs = HomeWidgetPlugin.getData(context)
-        val lastAdded = prefs.getInt("last_added_ml", 0)
 
-        if (lastAdded > 0) {
-            val currentIntake = prefs.getInt("intake", 0)
-            val newIntake = (currentIntake - lastAdded).coerceAtLeast(0)
-            
-            prefs.edit()
-                .putInt("intake", newIntake)
-                .putInt("last_added_ml", 0)
-                .apply()
+        val stackStr = prefs.getString("widget_add_stack", "") ?: ""
+        if (stackStr.isEmpty()) return
+        
+        val stack = stackStr.split(",").toMutableList()
+        val lastAdded = stack.removeAt(0).toIntOrNull() ?: 0
+        if (lastAdded <= 0) return
+        
+        val newStackStr = stack.joinToString(",")
+        val nextAdded = if (stack.isNotEmpty()) stack[0].toIntOrNull() ?: 0 else 0
 
-            GridWidget().update(context, glanceId)
+        val currentIntake = prefs.getInt("intake", 0)
+        val newIntake = (currentIntake - lastAdded).coerceAtLeast(0)
+        
+        prefs.edit()
+            .putInt("intake", newIntake)
+            .putInt("last_added_ml", nextAdded)
+            .putString("widget_add_stack", newStackStr)
+            .apply()
 
-            try {
-                HomeWidgetBackgroundIntent.getBroadcast(
-                    context,
-                    Uri.parse("waterWidget://undo")
-                ).send()
-            } catch (_: Exception) {}
+        // Instant redraw for this widget + WorkManager syncs the rest
+        WidgetUpdateHelper.scheduleUpdate(context) {
+            GridWidget().updateAll(context)
         }
+
+        try {
+            HomeWidgetBackgroundIntent.getBroadcast(
+                context,
+                Uri.parse("waterWidget://undo")
+            ).send()
+        } catch (_: Exception) {}
     }
 }
 
@@ -80,13 +93,21 @@ class AddGridWaterAction : ActionCallback {
         if (amount <= 0) return
 
         val prefs = HomeWidgetPlugin.getData(context)
+
         val currentIntake = prefs.getInt("intake", 0)
+        
+        val lastStack = prefs.getString("widget_add_stack", "") ?: ""
+        val newStack = if (lastStack.isEmpty()) "$amount" else "$amount,$lastStack"
+
         prefs.edit()
             .putInt("intake", currentIntake + amount)
             .putInt("last_added_ml", amount)
+            .putString("widget_add_stack", newStack)
             .apply()
 
-        GridWidget().update(context, glanceId)
+        WidgetUpdateHelper.scheduleUpdate(context) {
+            GridWidget().updateAll(context)
+        }
 
         try {
             HomeWidgetBackgroundIntent.getBroadcast(
@@ -99,6 +120,17 @@ class AddGridWaterAction : ActionCallback {
 
 class GridWidgetReceiver : GlanceAppWidgetReceiver() {
     override val glanceAppWidget: GlanceAppWidget = GridWidget()
+
+    override fun onUpdate(
+        context: Context,
+        appWidgetManager: AppWidgetManager,
+        appWidgetIds: IntArray
+    ) {
+        super.onUpdate(context, appWidgetManager, appWidgetIds)
+        WidgetUpdateHelper.scheduleUpdate(context) {
+            GridWidget().updateAll(context)
+        }
+    }
 }
 
 class GridWidget : GlanceAppWidget() {
@@ -129,6 +161,7 @@ class GridWidget : GlanceAppWidget() {
 
             val intake = prefs.getInt("intake", 0)
             val goal = prefs.getInt("goal", 2450).coerceAtLeast(1)
+            val unit = prefs.getString("volume_unit", "ml") ?: "ml"
             val nextReminder = prefs.getString("next_reminder", "--:--") ?: "--:--"
             
             val isCompleted = intake >= goal
@@ -159,7 +192,7 @@ class GridWidget : GlanceAppWidget() {
                                 )
                             )
                             Text(
-                                text = "/$goal",
+                                text = "/$goal $unit",
                                 maxLines = 1,
                                 style = TextStyle(
                                     color = c.textSub,

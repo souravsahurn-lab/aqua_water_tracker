@@ -6,7 +6,7 @@
     android:targetCellHeight="1"
     android:maxResizeWidth="530dp"
     android:maxResizeHeight="90dp"
-    android:previewImage="@mipmap/ic_launcher"
+    android:previewImage="@drawable/preview_water"
     android:description="@string/water_widget_description"
     android:resizeMode="horizontal"
     android:widgetCategory="home_screen"

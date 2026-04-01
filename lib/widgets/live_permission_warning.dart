@@ -13,22 +13,36 @@ class LivePermissionWarning extends StatefulWidget {
   State<LivePermissionWarning> createState() => _LivePermissionWarningState();
 }
 
-class _LivePermissionWarningState extends State<LivePermissionWarning> with WidgetsBindingObserver {
+class _LivePermissionWarningState extends State<LivePermissionWarning> with WidgetsBindingObserver, SingleTickerProviderStateMixin {
   bool _isChecking = true;
   bool _notif = true;
   bool _alarm = true;
   bool _battery = true;
 
+  late AnimationController _pulseController;
+  late Animation<double> _pulseAnimation;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 2),
+    )..repeat(reverse: true);
+
+    _pulseAnimation = Tween<double>(begin: 0.15, end: 0.4).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    );
+
     _checkPermissions();
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _pulseController.dispose();
     super.dispose();
   }
 
@@ -88,53 +102,71 @@ class _LivePermissionWarningState extends State<LivePermissionWarning> with Widg
 
     return GestureDetector(
       onTap: _showPermissionSheet,
-      child: Container(
-        margin: EdgeInsets.only(top: 8.h),
-        padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.h),
-        decoration: BoxDecoration(
-          color: context.colors.danger.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(10.r),
-          border: Border.all(
-            color: context.colors.danger.withValues(alpha: 0.3),
-            width: 1.w,
-          ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(
-              Icons.warning_amber_rounded,
-              size: 14.sp,
-              color: context.colors.danger,
-            ),
-            SizedBox(width: 6.w),
-            Flexible(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Setup Incomplete',
-                    style: TextStyle(
-                      fontSize: 10.sp,
-                      fontWeight: FontWeight.w800,
-                      color: context.colors.danger,
-                    ),
-                  ),
-                  Text(
-                    'Missing: $missingStr. Tap to fix.',
-                    style: TextStyle(
-                      fontSize: 9.sp,
-                      fontWeight: FontWeight.w600,
-                      color: context.colors.danger.withValues(alpha: 0.8),
-                    ),
-                  ),
-                ],
+      child: AnimatedBuilder(
+        animation: _pulseAnimation,
+        builder: (context, child) {
+          return Container(
+            margin: EdgeInsets.only(top: 8.h),
+            padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.h),
+            decoration: BoxDecoration(
+              color: context.colors.danger.withValues(alpha: _pulseAnimation.value),
+              borderRadius: BorderRadius.circular(10.r),
+              border: Border.all(
+                color: context.colors.danger.withValues(alpha: _pulseAnimation.value + 0.2),
+                width: 1.5.w,
               ),
+              boxShadow: [
+                BoxShadow(
+                  color: context.colors.danger.withValues(alpha: _pulseAnimation.value * 0.5),
+                  blurRadius: 8 * _pulseAnimation.value * 2,
+                  spreadRadius: 1,
+                ),
+              ],
             ),
-          ],
-        ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                ScaleTransition(
+                  scale: Tween<double>(begin: 1.0, end: 1.15).animate(_pulseController),
+                  child: Icon(
+                    Icons.error_outline_rounded,
+                    size: 16.sp,
+                    color: Colors.white,
+                  ),
+                ),
+                SizedBox(width: 8.w),
+                Flexible(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'CRITICAL SETUP NEEDED',
+                        style: TextStyle(
+                          fontSize: 10.sp,
+                          fontWeight: FontWeight.w900,
+                          color: Colors.white,
+                          letterSpacing: 0.2,
+                        ),
+                      ),
+                      Text(
+                        'Missing: $missingStr. Click to fix.',
+                        style: TextStyle(
+                          fontSize: 9.sp,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white.withValues(alpha: 0.9),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
       ),
     );
   }
 }
+

@@ -7,6 +7,8 @@ import '../services/notification_service.dart';
 import '../widgets/top_snackbar.dart';
 import 'package:flutter/services.dart';
 import 'aqua_reminder_screen.dart';
+import '../widgets/live_permission_warning.dart';
+import '../utils/time_utils.dart';
 
 class ScheduleScreen extends StatefulWidget {
   const ScheduleScreen({super.key});
@@ -74,9 +76,9 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                                   context,
                                   icon: '🌅',
                                   label: 'Wake Up',
-                                  time: userData.wakeTime,
+                                  time: TimeUtils.formatString(userData.wakeTime, userData.is24HourFormat),
                                   onTap: () =>
-                                      _pickTime(context, userData.wakeTime, (t) {
+                                      _pickTime(context, userData.wakeTime, userData.is24HourFormat ?? false, (t) {
                                     provider.updateWakeTime(t);
                                     if (userData.smartReminders) {
                                       provider.regenerateSmartReminders();
@@ -90,9 +92,9 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                                   context,
                                   icon: '🌙',
                                   label: 'Bedtime',
-                                  time: userData.sleepTime,
+                                  time: TimeUtils.formatString(userData.sleepTime, userData.is24HourFormat),
                                   onTap: () =>
-                                      _pickTime(context, userData.sleepTime, (t) {
+                                      _pickTime(context, userData.sleepTime, userData.is24HourFormat ?? false, (t) {
                                     provider.updateSleepTime(t);
                                     if (userData.smartReminders) {
                                       provider.regenerateSmartReminders();
@@ -134,6 +136,8 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                             ),
                           ),
                           SizedBox(height: 14.h),
+                          const LivePermissionWarning(),
+                          SizedBox(height: 12.h),
 
                           // Notification sound
                           GestureDetector(
@@ -448,6 +452,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   Future<void> _pickTime(
     BuildContext context,
     String current,
+    bool is24h,
     ValueChanged<String> onPicked,
   ) async {
     final parts = current.split(':');
@@ -458,6 +463,12 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     final picked = await showTimePicker(
       context: context,
       initialTime: initial,
+      builder: (context, child) {
+        return MediaQuery(
+          data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: is24h),
+          child: child!,
+        );
+      },
     );
     if (picked != null) {
       onPicked(

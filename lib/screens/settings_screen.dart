@@ -11,6 +11,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:intl/intl.dart';
 import '../services/billing_service.dart';
 import 'premium_screen.dart';
+import '../widgets/battery_optimization_card.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -219,7 +220,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           );
                         }
                         return Padding(
-                          padding: EdgeInsets.only(bottom: 20.h),
+                          padding: EdgeInsets.only(bottom: 24.h),
                           child: GestureDetector(
                             onTap: () {
                               Navigator.push(context, MaterialPageRoute(builder: (_) => const PremiumScreen()));
@@ -274,6 +275,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       },
                     ),
 
+                    // Battery optimization configuration card
+                    const BatteryOptimizationCard(),
+
                     // Hydration section
                     _sectionTitle('Hydration', c),
                     _buildCard(
@@ -284,15 +288,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           icon: Icons.gps_fixed_rounded,
                           iconColor: c.primary,
                           label: 'Daily Goal',
-                          value: '${userData.goal} ml',
+                          value: '${userData.goal} ${userData.volumeUnit}',
                           onTap: () => _showEditGoalSheet(context, provider),
+                        ),
+                        _settingRow(
+                          c: c,
+                          icon: Icons.local_drink_rounded,
+                          iconColor: c.primary,
+                          label: 'Volume Unit',
+                          value: userData.volumeUnit.toUpperCase(),
+                          onTap: () => _showEditVolumeUnitSheet(context, provider),
                         ),
                         _settingRow(
                           c: c,
                           icon: null,
                           emoji: '⚖️',
                           label: 'Weight',
-                          value: '${userData.weight} kg',
+                          value: '${userData.weight} ${userData.weightUnit}',
                           onTap: () => _showEditWeightSheet(context, provider),
                         ),
                         _settingRow(
@@ -359,6 +371,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           label: 'Dark Mode',
                           value: userData.darkMode,
                           onChanged: provider.toggleDarkMode,
+                        ),
+                        _toggleRow(
+                          c: c,
+                          emoji: '⏰',
+                          label: '24-hour Time',
+                          value: provider.userData.is24HourFormat ?? MediaQuery.of(context).alwaysUse24HourFormat,
+                          onChanged: provider.updateIs24HourFormat,
                           isLast: true,
                         ),
                       ],
@@ -399,6 +418,48 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             final url = Uri.parse('https://solefate.blogspot.com/p/privacy-policy-for-aqua-water-reminder.html');
                             if (await canLaunchUrl(url)) {
                               await launchUrl(url, mode: LaunchMode.externalApplication);
+                            }
+                          },
+                        ),
+                        _settingRow(
+                          c: c,
+                          emoji: '❓',
+                          label: 'FAQ & Help',
+                          value: 'Open',
+                          onTap: () => _showFAQSheet(context),
+                        ),
+                        _settingRow(
+                          c: c,
+                          emoji: '📧',
+                          label: 'Contact Support',
+                          value: 'Email',
+                          onTap: () async {
+                            final Uri emailLaunchUri = Uri(
+                              scheme: 'mailto',
+                              path: 'solefate@gmail.com',
+                              queryParameters: {
+                                'subject': 'Aqua Water Tracker Support',
+                              },
+                            );
+                            if (await canLaunchUrl(emailLaunchUri)) {
+                              await launchUrl(emailLaunchUri);
+                            }
+                          },
+                        ),
+                        _settingRow(
+                          c: c,
+                          emoji: '⭐',
+                          label: 'Rate Aqua',
+                          value: 'Review',
+                          onTap: () async {
+                            final url = Uri.parse('market://details?id=com.solefate.aquawatertracker'); // Android Play Store link
+                            if (await canLaunchUrl(url)) {
+                              await launchUrl(url, mode: LaunchMode.externalApplication);
+                            } else {
+                              final webUrl = Uri.parse('https://play.google.com/store/apps/details?id=com.solefate.aquawatertracker');
+                              if (await canLaunchUrl(webUrl)) {
+                                await launchUrl(webUrl, mode: LaunchMode.externalApplication);
+                              }
                             }
                           },
                         ),
@@ -644,6 +705,66 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════════════
+  // Edit Volume Unit
+  // ═══════════════════════════════════════════════════════════════════
+
+  void _showEditVolumeUnitSheet(BuildContext context, HydrationProvider provider) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        final units = ['ml', 'oz'];
+        return Container(
+          padding: EdgeInsets.fromLTRB(24.w, 20.h, 24.w, MediaQuery.of(ctx).viewInsets.bottom + 30.h),
+          decoration: BoxDecoration(
+            color: context.colors.card,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(32.r)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(child: Container(width: 40.w, height: 4.h, decoration: BoxDecoration(color: context.colors.softLight, borderRadius: BorderRadius.circular(10.r)))),
+              SizedBox(height: 24.h),
+              Text('Volume Unit', style: TextStyle(fontSize: 20.sp, fontWeight: FontWeight.w800, color: context.colors.primaryDark)),
+              SizedBox(height: 16.h),
+              Column(
+                children: units.map((u) {
+                  final isSelected = provider.userData.volumeUnit == u;
+                  return GestureDetector(
+                    onTap: () {
+                      provider.updateVolumeUnit(u);
+                      Navigator.pop(ctx);
+                      TopSnackBar.show(context, message: 'Unit updated to ${u.toUpperCase()}', type: TopSnackBarType.success);
+                    },
+                    child: Container(
+                      padding: EdgeInsets.symmetric(vertical: 16.h, horizontal: 20.w),
+                      margin: EdgeInsets.only(bottom: 12.h),
+                      decoration: BoxDecoration(
+                        color: isSelected ? context.colors.primary.withValues(alpha: 0.1) : context.colors.softLight.withValues(alpha: 0.5),
+                        borderRadius: BorderRadius.circular(16.r),
+                        border: Border.all(color: isSelected ? context.colors.primary : Colors.transparent),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(u.toUpperCase(), style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.w700, color: isSelected ? context.colors.primary : context.colors.primaryDark)),
+                          if (isSelected) Icon(Icons.check_circle_rounded, color: context.colors.primary),
+                        ],
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -967,6 +1088,80 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
 
+
+  // ═══════════════════════════════════════════════════════════════════
+  // FAQ Sheet
+  // ═══════════════════════════════════════════════════════════════════
+
+  void _showFAQSheet(BuildContext context) {
+    final faq = [
+      {
+        'q': 'Why are my widgets not updating?',
+        'a': 'Android\'s battery optimization can sometimes pause background updates. To fix this, please set Aqua to "Unrestricted" in your device\'s Battery settings.'
+      },
+      {
+        'q': 'How does the auto-goal work?',
+        'a': 'We calculate your daily goal based on your weight, height, age, and activity level using a personalized scientific formula.'
+      },
+      {
+        'q': 'Are my reminders smart?',
+        'a': 'Yes! Regular reminders pause automatically during your sleep window (set in schedule) and only resume when you wake up.'
+      },
+      {
+        'q': 'How to sync data between widgets?',
+        'a': 'All widgets sync instantly when you add or remove water in the app. If they seem stuck, open the app once to force a refresh.'
+      },
+      {
+        'q': 'What is Aqua Pro?',
+        'a': 'Aqua Pro is a lifetime upgrade that unlocks 5 unique home widgets, data sharing, and removes all advertisements.'
+      },
+    ];
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        height: MediaQuery.of(ctx).size.height * 0.75,
+        padding: EdgeInsets.fromLTRB(24.w, 20.h, 24.w, 30.h),
+        decoration: BoxDecoration(
+          color: context.colors.card,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(32.r)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(child: Container(width: 40.w, height: 4.h, decoration: BoxDecoration(color: context.colors.softLight, borderRadius: BorderRadius.circular(10.r)))),
+            SizedBox(height: 24.h),
+            Text('FAQ & Help', style: TextStyle(fontSize: 22.sp, fontWeight: FontWeight.w900, color: context.colors.primaryDark)),
+            SizedBox(height: 16.h),
+            Expanded(
+              child: ListView.builder(
+                itemCount: faq.length,
+                itemBuilder: (ctx, i) => Theme(
+                  data: Theme.of(ctx).copyWith(dividerColor: Colors.transparent),
+                  child: ExpansionTile(
+                    tilePadding: EdgeInsets.zero,
+                    childrenPadding: EdgeInsets.only(bottom: 16.h),
+                    title: Text(
+                      faq[i]['q']!,
+                      style: TextStyle(fontSize: 14.sp, fontWeight: FontWeight.w700, color: context.colors.primaryDark),
+                    ),
+                    children: [
+                      Text(
+                        faq[i]['a']!,
+                        style: TextStyle(fontSize: 13.sp, color: context.colors.mutedLight, height: 1.5),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
   // ═══════════════════════════════════════════════════════════════════
   // Reset Confirmation

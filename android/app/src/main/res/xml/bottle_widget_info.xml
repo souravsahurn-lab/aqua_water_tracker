@@ -6,7 +6,7 @@
     android:targetCellHeight="3"
     android:maxResizeWidth="250dp"
     android:maxResizeHeight="400dp"
-    android:previewImage="@mipmap/ic_launcher"
+    android:previewImage="@drawable/preview_bottle"
     android:description="@string/bottle_widget_description"
     android:resizeMode="horizontal|vertical"
     android:widgetCategory="home_screen"

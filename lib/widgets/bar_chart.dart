@@ -95,10 +95,10 @@ class _SimpleBarChartState extends State<SimpleBarChart>
         // Bars
         ClipRect(
           child: SizedBox(
-          height: 125.h,
+          height: 145.h,
           child: LayoutBuilder(
             builder: (context, constraints) {
-              final maxBarH = constraints.maxHeight - 48.h; // Reserve space for 2-line bottom labels + top ml labels
+              final maxBarH = constraints.maxHeight - 56.h; // Reserve space for rotated/2-line bottom labels + top ml labels
               return AnimatedBuilder(
                 animation: _controller,
                 builder: (context, _) {
@@ -209,22 +209,46 @@ class _SimpleBarChartState extends State<SimpleBarChart>
                                 ),
                               ),
                               SizedBox(height: 4.h),
-                              FittedBox(
-                                fit: BoxFit.scaleDown,
-                                child: Text(
-                                  widget.labels[i],
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                    fontSize: fontSize,
-                                    fontWeight: isHighlighted ? FontWeight.w700 : FontWeight.w400,
-                                    color: isGoalMet 
-                                        ? context.colors.success 
-                                        : (isHighlighted
-                                            ? context.colors.primary
-                                            : context.colors.mutedLight),
+                              // For charts with many bars, use rotated labels to prevent clustering
+                              if (totalBars > 7)
+                                SizedBox(
+                                  height: 22.h,
+                                  child: Transform.rotate(
+                                    angle: -0.52, // ~30 degrees
+                                    child: Text(
+                                      widget.labels[i],
+                                      textAlign: TextAlign.center,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.clip,
+                                      style: TextStyle(
+                                        fontSize: totalBars > 10 ? 6.sp : 7.sp,
+                                        fontWeight: isHighlighted ? FontWeight.w700 : FontWeight.w400,
+                                        color: isGoalMet 
+                                            ? context.colors.success 
+                                            : (isHighlighted
+                                                ? context.colors.primary
+                                                : context.colors.mutedLight),
+                                      ),
+                                    ),
+                                  ),
+                                )
+                              else
+                                FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  child: Text(
+                                    widget.labels[i],
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      fontSize: fontSize,
+                                      fontWeight: isHighlighted ? FontWeight.w700 : FontWeight.w400,
+                                      color: isGoalMet 
+                                          ? context.colors.success 
+                                          : (isHighlighted
+                                              ? context.colors.primary
+                                              : context.colors.mutedLight),
+                                    ),
                                   ),
                                 ),
-                              ),
                             ],
                           ),
                         ),

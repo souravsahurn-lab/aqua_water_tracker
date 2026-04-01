@@ -5,6 +5,7 @@ import '../models/user_data.dart';
 import '../models/drink_log.dart';
 import '../services/notification_service.dart';
 import '../services/widget_service.dart';
+import '../utils/time_utils.dart';
 
 class HydrationProvider extends ChangeNotifier with WidgetsBindingObserver {
   UserData _userData = UserData();
@@ -378,6 +379,10 @@ class HydrationProvider extends ChangeNotifier with WidgetsBindingObserver {
     return starts.map((h) {
       final hEnd = (h + 2) % 24;
 
+      if (_userData.is24HourFormat == true) {
+        return '${h.toString().padLeft(2, '0')}-${hEnd.toString().padLeft(2, '0')}h';
+      }
+
       final h12S = h == 0 ? 12 : (h > 12 ? h - 12 : h);
       final suffixS = h < 12 ? 'a' : 'p';
 
@@ -691,10 +696,7 @@ class HydrationProvider extends ChangeNotifier with WidgetsBindingObserver {
     final now = TimeOfDay.now();
     for (var r in generatedReminders) {
       if (r.hour > now.hour || (r.hour == now.hour && r.minute > now.minute)) {
-        final hr = r.hour == 0 ? 12 : (r.hour > 12 ? r.hour - 12 : r.hour);
-        final min = r.minute.toString().padLeft(2, '0');
-        final ampm = r.hour < 12 ? 'AM' : 'PM';
-        return '$hr:$min $ampm';
+        return TimeUtils.formatTimeOfDay(r, _userData.is24HourFormat);
       }
     }
     return '--:--';
@@ -797,6 +799,32 @@ class HydrationProvider extends ChangeNotifier with WidgetsBindingObserver {
     _userData.age = age;
     _saveToPrefs();
     notifyListeners();
+  }
+
+  void updateIs24HourFormat(bool is24) {
+    _userData.is24HourFormat = is24;
+    _saveToPrefs();
+    notifyListeners();
+  }
+
+  void updateVolumeUnit(String unit) {
+    _userData.volumeUnit = unit;
+    _saveToPrefs();
+    notifyListeners();
+  }
+
+  void updateWeightUnit(String unit) {
+    _userData.weightUnit = unit;
+    _saveToPrefs();
+    notifyListeners();
+  }
+
+  void initTimeFormatIfNeeded(bool is24) {
+    if (_userData.is24HourFormat == null) {
+      _userData.is24HourFormat = is24;
+      _saveToPrefs();
+      notifyListeners();
+    }
   }
 
   void updateActivity(String activity) {

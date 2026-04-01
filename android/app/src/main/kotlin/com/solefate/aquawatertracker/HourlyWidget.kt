@@ -18,6 +18,7 @@ import androidx.glance.appwidget.cornerRadius
 import androidx.glance.appwidget.LinearProgressIndicator
 import androidx.glance.appwidget.action.ActionCallback
 import androidx.glance.appwidget.action.actionRunCallback
+import androidx.glance.appwidget.updateAll
 import androidx.glance.background
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Box
@@ -54,13 +55,22 @@ class AddHourlyWaterAction : ActionCallback {
         if (amount <= 0) return
 
         val prefs = HomeWidgetPlugin.getData(context)
+
         val currentIntake = prefs.getInt("intake", 0)
+        
+        val lastStack = prefs.getString("widget_add_stack", "") ?: ""
+        val newStack = if (lastStack.isEmpty()) "$amount" else "$amount,$lastStack"
+
         prefs.edit()
             .putInt("intake", currentIntake + amount)
             .putInt("last_added_ml", amount)
+            .putString("widget_add_stack", newStack)
             .apply()
 
-        HourlyWidget().update(context, glanceId)
+        // Instant redraw for this widget + WorkManager syncs the rest
+        WidgetUpdateHelper.scheduleUpdate(context) {
+            HourlyWidget().updateAll(context)
+        }
 
         try {
             HomeWidgetBackgroundIntent.getBroadcast(
@@ -78,26 +88,36 @@ class UndoHourlyWaterAction : ActionCallback {
         parameters: ActionParameters
     ) {
         val prefs = HomeWidgetPlugin.getData(context)
-        val lastAdded = prefs.getInt("last_added_ml", 0)
 
-        if (lastAdded > 0) {
-            val currentIntake = prefs.getInt("intake", 0)
-            val newIntake = (currentIntake - lastAdded).coerceAtLeast(0)
+        val stackStr = prefs.getString("widget_add_stack", "") ?: ""
+        if (stackStr.isEmpty()) return
+        
+        val stack = stackStr.split(",").toMutableList()
+        val lastAdded = stack.removeAt(0).toIntOrNull() ?: 0
+        if (lastAdded <= 0) return
+        
+        val newStackStr = stack.joinToString(",")
+        val nextAdded = if (stack.isNotEmpty()) stack[0].toIntOrNull() ?: 0 else 0
 
-            prefs.edit()
-                .putInt("intake", newIntake)
-                .putInt("last_added_ml", 0)
-                .apply()
+        val currentIntake = prefs.getInt("intake", 0)
+        val newIntake = (currentIntake - lastAdded).coerceAtLeast(0)
 
-            HourlyWidget().update(context, glanceId)
+        prefs.edit()
+            .putInt("intake", newIntake)
+            .putInt("last_added_ml", nextAdded)
+            .putString("widget_add_stack", newStackStr)
+            .apply()
 
-            try {
-                HomeWidgetBackgroundIntent.getBroadcast(
-                    context,
-                    Uri.parse("waterWidget://undo")
-                ).send()
-            } catch (_: Exception) {}
+        WidgetUpdateHelper.scheduleUpdate(context) {
+            HourlyWidget().updateAll(context)
         }
+
+        try {
+            HomeWidgetBackgroundIntent.getBroadcast(
+                context,
+                Uri.parse("waterWidget://undo")
+            ).send()
+        } catch (_: Exception) {}
     }
 }
 
@@ -134,6 +154,7 @@ class HourlyWidget : GlanceAppWidget() {
 
             val intake  = prefs.getInt("intake", 0)
             val goal    = prefs.getInt("goal", 2450).coerceAtLeast(1)
+            val unit = prefs.getString("volume_unit", "ml") ?: "ml"
             val streak  = prefs.getInt("streak", 0)
             val nextRem = prefs.getString("next_reminder", "--:--") ?: "--:--"
             val lastAdded = prefs.getInt("last_added_ml", 0)
@@ -217,8 +238,6 @@ class HourlyWidget : GlanceAppWidget() {
                     verticalAlignment = Alignment.Bottom
                 ) {
                     val barCount = vals.size.coerceAtMost(labels.size)
-                    // Scaled target for hourly bars (e.g. 350ml is a "full" bar if goal is 2400)
-                    val hourlyScaleTarget = (goalFloat / barCount.coerceAtLeast(1) * 1.5f).coerceAtLeast(100f)
 
                     for (i in 0 until barCount) {
                         Column(
@@ -231,21 +250,26 @@ class HourlyWidget : GlanceAppWidget() {
                             val v = vals[i]
                             val rawDynMaxH = (size.height.value - 158f).coerceAtLeast(10f)
                             val dynMaxH = (rawDynMaxH * 0.9f).coerceAtLeast(10f)
-                            
-                            // Scale bar height to our estimated hourly target
-                            val barHGauge = (v.toFloat() / hourlyScaleTarget * dynMaxH).coerceIn(0f, dynMaxH)
-                            val barH = if (v > 0) barHGauge.coerceAtLeast(8f) else 0f
-                            
-                            // Check against a "target met" for this hour (e.g. 1/8th of goal)
-                            val isHourlyTargetMet = v >= (goalFloat / barCount.coerceAtLeast(1))
+
+                            // Scale bar height against the TOTAL daily goal so bars fill progressively
+                            val barHGauge = (v.toFloat() / goalFloat * dynMaxH).coerceIn(0f, dynMaxH)
+                            val barH = if (v > 0) barHGauge.coerceAtLeast(4f) else 0f
+
+                            // Use neutral primary color for all filled bars
+                            val barColor = if (v > 0) c.primary else c.card
 
                             // Show intake value above bar if it exists
                             if (v > 0) {
+                                val displayVal = if (v >= 1000) {
+                                    String.format("%.1fk", v / 1000f)
+                                } else {
+                                    "$v"
+                                }
                                 Text(
-                                    text = "$v",
+                                    text = displayVal,
                                     maxLines = 1,
                                     style = TextStyle(
-                                        color = if (isHourlyTargetMet) completedColor else c.textSub,
+                                        color = if (v >= goal) completedColor else c.textSub,
                                         fontSize = 8.sp,
                                         fontWeight = FontWeight.Bold
                                     )
@@ -267,7 +291,7 @@ class HourlyWidget : GlanceAppWidget() {
                                             .fillMaxWidth()
                                             .height(barH.dp)
                                             .cornerRadius(24.dp)
-                                            .background(if (isHourlyTargetMet) completedColor else c.primary)
+                                            .background(barColor)
                                     ) {}
                                 }
                             }
@@ -293,7 +317,7 @@ class HourlyWidget : GlanceAppWidget() {
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "$intake/$goal ml",
+                        text = "$intake/$goal $unit",
                         maxLines = 1,
                         style = TextStyle(
                             color = if (isCompleted) completedColor else c.textMain,
@@ -374,5 +398,17 @@ class HourlyWidget : GlanceAppWidget() {
                 }
             }
         }
+    }
+}
+
+// ── Helper: Color by completion percentage ──────────────────────
+private fun getCompletionColor(v: Int, g: Int): ColorProvider {
+    val pct = if (g > 0) (v.toFloat() / g.toFloat() * 100) else 0f
+    return when {
+        pct >= 100 -> ColorProvider(Color(0xFF22C55E)) // Success (Green)
+        pct >= 75 ->  ColorProvider(Color(0xFF4ADE80)) // Light Green
+        pct >= 50 ->  ColorProvider(Color(0xFFFBBF24)) // Yellow
+        pct >= 25 ->  ColorProvider(Color(0xFFF97316)) // Orange
+        else ->       ColorProvider(Color(0xFFEF4444)) // Red
     }
 }

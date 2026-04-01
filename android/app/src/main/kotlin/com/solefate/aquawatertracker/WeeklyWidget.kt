@@ -6,6 +6,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import android.appwidget.AppWidgetManager
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.action.ActionParameters
@@ -19,6 +20,7 @@ import androidx.glance.appwidget.cornerRadius
 import androidx.glance.appwidget.LinearProgressIndicator
 import androidx.glance.appwidget.action.ActionCallback
 import androidx.glance.appwidget.action.actionRunCallback
+import androidx.glance.appwidget.updateAll
 import androidx.glance.background
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Box
@@ -55,13 +57,22 @@ class AddWeeklyWaterAction : ActionCallback {
         if (amount <= 0) return
 
         val prefs = HomeWidgetPlugin.getData(context)
+
         val currentIntake = prefs.getInt("intake", 0)
+        
+        val lastStack = prefs.getString("widget_add_stack", "") ?: ""
+        val newStack = if (lastStack.isEmpty()) "$amount" else "$amount,$lastStack"
+
         prefs.edit()
             .putInt("intake", currentIntake + amount)
             .putInt("last_added_ml", amount)
+            .putString("widget_add_stack", newStack)
             .apply()
 
-        WeeklyWidget().update(context, glanceId)
+        // Instant redraw for this widget + WorkManager syncs the rest
+        WidgetUpdateHelper.scheduleUpdate(context) {
+            WeeklyWidget().updateAll(context)
+        }
 
         try {
             HomeWidgetBackgroundIntent.getBroadcast(
@@ -79,31 +90,52 @@ class UndoWeeklyWaterAction : ActionCallback {
         parameters: ActionParameters
     ) {
         val prefs = HomeWidgetPlugin.getData(context)
-        val lastAdded = prefs.getInt("last_added_ml", 0)
 
-        if (lastAdded > 0) {
-            val currentIntake = prefs.getInt("intake", 0)
-            val newIntake = (currentIntake - lastAdded).coerceAtLeast(0)
+        val stackStr = prefs.getString("widget_add_stack", "") ?: ""
+        if (stackStr.isEmpty()) return
+        
+        val stack = stackStr.split(",").toMutableList()
+        val lastAdded = stack.removeAt(0).toIntOrNull() ?: 0
+        if (lastAdded <= 0) return
+        
+        val newStackStr = stack.joinToString(",")
+        val nextAdded = if (stack.isNotEmpty()) stack[0].toIntOrNull() ?: 0 else 0
 
-            prefs.edit()
-                .putInt("intake", newIntake)
-                .putInt("last_added_ml", 0)
-                .apply()
+        val currentIntake = prefs.getInt("intake", 0)
+        val newIntake = (currentIntake - lastAdded).coerceAtLeast(0)
 
-            WeeklyWidget().update(context, glanceId)
+        prefs.edit()
+            .putInt("intake", newIntake)
+            .putInt("last_added_ml", nextAdded)
+            .putString("widget_add_stack", newStackStr)
+            .apply()
 
-            try {
-                HomeWidgetBackgroundIntent.getBroadcast(
-                    context,
-                    Uri.parse("waterWidget://undo")
-                ).send()
-            } catch (_: Exception) {}
+        WidgetUpdateHelper.scheduleUpdate(context) {
+            WeeklyWidget().updateAll(context)
         }
+
+        try {
+            HomeWidgetBackgroundIntent.getBroadcast(
+                context,
+                Uri.parse("waterWidget://undo")
+            ).send()
+        } catch (_: Exception) {}
     }
 }
 
 class WeeklyWidgetReceiver : GlanceAppWidgetReceiver() {
     override val glanceAppWidget: GlanceAppWidget = WeeklyWidget()
+
+    override fun onUpdate(
+        context: Context,
+        appWidgetManager: AppWidgetManager,
+        appWidgetIds: IntArray
+    ) {
+        super.onUpdate(context, appWidgetManager, appWidgetIds)
+        WidgetUpdateHelper.scheduleUpdate(context) {
+            WeeklyWidget().updateAll(context)
+        }
+    }
 }
 
 // ── Helper: Color by completion percentage ──────────────────────
@@ -153,6 +185,7 @@ class WeeklyWidget : GlanceAppWidget() {
 
             val intake  = prefs.getInt("intake", 0)
             val goal    = prefs.getInt("goal", 2450).coerceAtLeast(1)
+            val unit = prefs.getString("volume_unit", "ml") ?: "ml"
             val streak  = prefs.getInt("streak", 0)
             val nextRem = prefs.getString("next_reminder", "--:--") ?: "--:--"
             val lastAdded = prefs.getInt("last_added_ml", 0)
@@ -329,7 +362,7 @@ class WeeklyWidget : GlanceAppWidget() {
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "$intake/$goal ml",
+                        text = "$intake/$goal $unit",
                         maxLines = 1,
                         style = TextStyle(
                             color = if (isCompleted) completedColor else c.textMain,

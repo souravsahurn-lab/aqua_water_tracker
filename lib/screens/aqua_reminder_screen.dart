@@ -6,6 +6,8 @@ import '../theme/app_theme.dart';
 import '../providers/hydration_provider.dart';
 import '../services/notification_service.dart';
 import '../widgets/top_snackbar.dart';
+import '../widgets/live_permission_warning.dart';
+import '../utils/time_utils.dart';
 
 class AquaReminderScreen extends StatefulWidget {
   const AquaReminderScreen({super.key});
@@ -47,6 +49,8 @@ class _AquaReminderScreenState extends State<AquaReminderScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                const LivePermissionWarning(),
+                SizedBox(height: 16.h),
                 // Smart Toggle Card
                 _buildCard(context,
                   child: Column(
@@ -301,7 +305,16 @@ class _AquaReminderScreenState extends State<AquaReminderScreen> {
         child: InkWell(
           onTap: () async {
             HapticFeedback.lightImpact();
-            final picked = await showTimePicker(context: context, initialTime: TimeOfDay.now());
+            final picked = await showTimePicker(
+              context: context, 
+              initialTime: TimeOfDay.now(),
+              builder: (context, child) {
+                return MediaQuery(
+                  data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: provider.userData.is24HourFormat ?? false),
+                  child: child!,
+                );
+              },
+            );
             if (picked != null) {
               provider.addCustomReminder(picked);
               if (mounted) TopSnackBar.show(context, message: 'Reminder added! 🔔', type: TopSnackBarType.success);
@@ -349,7 +362,8 @@ class _AquaReminderScreenState extends State<AquaReminderScreen> {
 
   Widget _buildReminderItem(BuildContext context, HydrationProvider provider, int idx, TimeOfDay t, TimeOfDay now) {
     final isPast = t.hour < now.hour || (t.hour == now.hour && t.minute <= now.minute);
-    final timeStr = '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
+    final is24h = provider.userData.is24HourFormat ?? false;
+    final timeStr = TimeUtils.formatTimeOfDay(t, is24h);
     final previewMsg = NotificationService.getMessageForTime(t.hour);
 
     return Container(
@@ -408,7 +422,16 @@ class _AquaReminderScreenState extends State<AquaReminderScreen> {
             icon: Icon(Icons.edit_rounded, size: 18.sp, color: context.colors.mutedLight),
             onPressed: () async {
               HapticFeedback.lightImpact();
-              final picked = await showTimePicker(context: context, initialTime: t);
+              final picked = await showTimePicker(
+                context: context, 
+                initialTime: t,
+                builder: (context, child) {
+                  return MediaQuery(
+                    data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: is24h),
+                    child: child!,
+                  );
+                },
+              );
               if (picked != null) {
                 provider.updateCustomReminder(idx, picked);
                 if (mounted) TopSnackBar.show(context, message: 'Updated ✏️', type: TopSnackBarType.info);

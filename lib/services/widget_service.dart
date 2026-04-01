@@ -1,85 +1,113 @@
+import 'package:flutter/material.dart';
 import 'package:home_widget/home_widget.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
+import 'dart:async';
 import '../models/user_data.dart';
 import '../models/drink_log.dart';
+import '../utils/time_utils.dart';
 
-/// Top-level background callback invoked when a widget button is tapped.
-/// Runs in its own isolate — no access to Provider or app state.
+// ── Isolate-safe state ──────────────────────────────────────────
+// These are reset every isolate spawn — that is intentional.
+// We no longer rely on them surviving across taps.
+bool _isProcessing = false;
+bool _pendingSync = false;
+DateTime? _processingStarted;
+const _lockTimeout = Duration(seconds: 5);
+
+bool get _lockExpired =>
+    _processingStarted != null &&
+    DateTime.now().difference(_processingStarted!) > _lockTimeout;
+
+UserData _loadUserData(SharedPreferences prefs) {
+  final str = prefs.getString('userData');
+  if (str == null) return UserData();
+  try {
+    return UserData.fromJson(jsonDecode(str));
+  } catch (_) {
+    return UserData();
+  }
+}
+
+List<DrinkLog> _loadLogs(SharedPreferences prefs) {
+  final str = prefs.getString('logs');
+  if (str == null) return [];
+  try {
+    final List<dynamic> decoded = jsonDecode(str);
+    return decoded.map((l) => DrinkLog.fromJson(l)).toList();
+  } catch (_) {
+    return [];
+  }
+}
+
+// ── Background callback ─────────────────────────────────────────
 @pragma('vm:entry-point')
 Future<void> interactiveCallback(Uri? uri) async {
   if (uri == null) return;
+
+  // Step 1: write Flutter-side data (logs, userData)
+  await _handleUri(uri);
+
+  // Step 2: Kotlin already updated widget UI instantly — Dart handles charts/logs only
+  if (_isProcessing && _lockExpired) {
+    _isProcessing = false;
+    _pendingSync = false;
+    _processingStarted = null;
+  }
+
+  if (_isProcessing) {
+    _pendingSync = true;
+    return;
+  }
+
+  _isProcessing = true;
+  _processingStarted = DateTime.now();
+  try {
+    // Coalesce rapid taps — wait briefly before heavy sync
+    await Future.delayed(const Duration(milliseconds: 500));
+    await WidgetService._syncChartsAndReminders();
+    while (_pendingSync) {
+      _pendingSync = false;
+      _processingStarted = DateTime.now();
+      await Future.delayed(const Duration(milliseconds: 500));
+      await WidgetService._syncChartsAndReminders();
+    }
+  } catch (_) {
+  } finally {
+    _isProcessing = false;
+    _processingStarted = null;
+  }
+}
+
+Future<void> _handleUri(Uri uri) async {
+  final prefs = await SharedPreferences.getInstance();
+  await prefs.reload();
 
   if (uri.host == 'add') {
     final amount = int.tryParse(uri.pathSegments.firstOrNull ?? '0') ?? 0;
     if (amount <= 0) return;
 
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.reload(); // CRITICAL: Force read from disk in the isolate
+    final userData = _loadUserData(prefs);
+    final logs = _loadLogs(prefs);
 
-    // ── Read current Flutter-side data ──
-    UserData userData = UserData();
-    final userDataStr = prefs.getString('userData');
-    if (userDataStr != null) {
-      try {
-        userData = UserData.fromJson(jsonDecode(userDataStr));
-      } catch (_) {}
-    }
-
-    // ── Update intake ──
     userData.drunk += amount;
 
-    // ── Add drink log ──
-    List<DrinkLog> logs = [];
-    final logsStr = prefs.getString('logs');
-    if (logsStr != null) {
-      try {
-        final List<dynamic> decoded = jsonDecode(logsStr);
-        logs = decoded.map((l) => DrinkLog.fromJson(l)).toList();
-      } catch (_) {}
-    }
-
     final now = DateTime.now();
-    logs.insert(
-      0,
-      DrinkLog(
-        date: now.toIso8601String().split('T')[0],
-        time:
-            '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}',
-        icon: '💧',
-        label: 'Water',
-        ml: amount,
-      ),
-    );
+    logs.insert(0, DrinkLog(
+      date: now.toIso8601String().split('T')[0],
+      time: '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}',
+      icon: '💧',
+      label: 'Water',
+      ml: amount,
+    ));
 
-    // ── Persist to Flutter prefs ──
     await prefs.setString('userData', jsonEncode(userData.toJson()));
-    await prefs.setString(
-        'logs', jsonEncode(logs.map((e) => e.toJson()).toList()));
-
-    // ── Sync widget prefs ──
-    // Pass isBackground: true so the widget doesn't get downgraded by stale isolate data.
-    await WidgetService.updateWidgetData(userData, logs: logs, isBackground: true);
+    await prefs.setString('logs', jsonEncode(logs.map((e) => e.toJson()).toList()));
   }
 
   if (uri.host == 'undo') {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.reload();
-
-    UserData userData = UserData();
-    final userDataStr = prefs.getString('userData');
-    if (userDataStr != null) {
-      try { userData = UserData.fromJson(jsonDecode(userDataStr)); } catch (_) {}
-    }
-
-    List<DrinkLog> logs = [];
-    final logsStr = prefs.getString('logs');
-    if (logsStr != null) {
-      try {
-        final List<dynamic> decoded = jsonDecode(logsStr);
-        logs = decoded.map((l) => DrinkLog.fromJson(l)).toList();
-      } catch (_) {}
-    }
+    final userData = _loadUserData(prefs);
+    final logs = _loadLogs(prefs);
 
     final todayStr = DateTime.now().toIso8601String().split('T')[0];
     if (logs.isNotEmpty && logs.first.date == todayStr) {
@@ -89,171 +117,215 @@ Future<void> interactiveCallback(Uri? uri) async {
 
       await prefs.setString('userData', jsonEncode(userData.toJson()));
       await prefs.setString('logs', jsonEncode(logs.map((e) => e.toJson()).toList()));
-      await WidgetService.updateWidgetData(userData, logs: logs, isBackground: true);
     }
+  }
+
+  // sync — fired by WorkManager when a new widget is added
+  // No data write needed — just let interactiveCallback run the full sync
+  if (uri.host == 'sync') {
+    // Nothing to write — fall through to chart sync in interactiveCallback
   }
 }
 
 class WidgetService {
-  /// Call once on app boot to register the background callback.
   static Future<void> initialize() async {
     await HomeWidget.setAppGroupId('');
     await HomeWidget.registerInteractivityCallback(interactiveCallback);
   }
 
-  /// Push the latest data into widget SharedPreferences and refresh the widget.
-  static Future<void> updateWidgetData(UserData userData, {List<DrinkLog>? logs, bool isBackground = false}) async {
+  // ── Critical sync — fast, always called on every tap ──────────
+  // Only writes intake/goal/streak/stack — completes in <100ms
+  static Future<void> syncCriticalData() async {
     try {
-      if (isBackground) {
-          int? currentWidgetIntake = await HomeWidget.getWidgetData<int>('intake');
-          if (currentWidgetIntake != null && userData.drunk < currentWidgetIntake) {
-              return; 
-          }
-      }
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.reload();
 
-      // Calculate display streak
+      final userData = _loadUserData(prefs);
+      final logs = _loadLogs(prefs);
+
       int displayStreak = userData.streak;
-      if (userData.drunk >= userData.goal) {
-        displayStreak++;
+      if (userData.drunk >= userData.goal) displayStreak++;
+
+      final todayStr = DateTime.now().toIso8601String().split('T')[0];
+      final todayLogs = logs.where((l) => l.date == todayStr).toList();
+      final lastAddedMl = todayLogs.isNotEmpty ? todayLogs.first.ml : 0;
+      final stackStr = todayLogs.map((e) => '${e.ml}').join(',');
+      final isPro = prefs.getBool('isPremium') ?? false;
+
+      // Write all critical keys in parallel
+      await Future.wait([
+        HomeWidget.saveWidgetData<int>('intake', userData.drunk),
+        HomeWidget.saveWidgetData<int>('goal', userData.goal),
+        HomeWidget.saveWidgetData<int>('streak', displayStreak),
+        HomeWidget.saveWidgetData<String>('volume_unit', userData.volumeUnit),
+        HomeWidget.saveWidgetData<int>('last_added_ml', lastAddedMl),
+        HomeWidget.saveWidgetData<String>('widget_add_stack', stackStr),
+        HomeWidget.saveWidgetData<bool>('is_premium', isPro),
+      ]);
+
+      // Single trigger call — Glance fans out to all instances
+      await _triggerAllWidgets();
+    } catch (_) {}
+  }
+
+  // ── Charts + reminders sync — heavier, coalesced ──────────────
+  static Future<void> _syncChartsAndReminders() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.reload();
+
+      final userData = _loadUserData(prefs);
+      final logs = _loadLogs(prefs);
+
+      // Always re-push intake/goal in case Kotlin wrote a newer value
+      int displayStreak = userData.streak;
+      if (userData.drunk >= userData.goal) displayStreak++;
+
+      await Future.wait([
+        HomeWidget.saveWidgetData<int>('intake', userData.drunk),
+        HomeWidget.saveWidgetData<int>('goal', userData.goal),
+        HomeWidget.saveWidgetData<int>('streak', displayStreak),
+      ]);
+
+      await _writeHourlyData(prefs, userData, logs);
+      await _writeWeeklyData(prefs, userData, logs);
+      await _writeNextReminder(prefs, userData);
+
+      // Final trigger — syncs chart data into widget
+      await _triggerAllWidgets();
+    } catch (_) {}
+  }
+
+  // ── Full sync — called from app foreground ─────────────────────
+  static Future<void> syncFullWidgetData() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.reload();
+
+      final userData = _loadUserData(prefs);
+      final logs = _loadLogs(prefs);
+
+      await updateWidgetData(userData, logs: logs);
+    } catch (_) {}
+  }
+
+  // ── Trigger all widgets — ONE call per widget type ─────────────
+  static Future<void> _triggerAllWidgets() async {
+    // Sequential not parallel — parallel hammers Glance and causes drops
+    await HomeWidget.updateWidget(
+        name: 'WaterWidgetReceiver', androidName: 'WaterWidgetReceiver');
+    await HomeWidget.updateWidget(
+        name: 'HourlyWidgetReceiver', androidName: 'HourlyWidgetReceiver');
+    await HomeWidget.updateWidget(
+        name: 'WeeklyWidgetReceiver', androidName: 'WeeklyWidgetReceiver');
+    await HomeWidget.updateWidget(
+        name: 'BottleWidgetReceiver', androidName: 'BottleWidgetReceiver');
+    await HomeWidget.updateWidget(
+        name: 'GridWidgetReceiver', androidName: 'GridWidgetReceiver');
+  }
+
+  // ── Hourly data writer ─────────────────────────────────────────
+  static Future<void> _writeHourlyData(
+      SharedPreferences prefs, UserData userData, List<DrinkLog> logs) async {
+    try {
+      final today = DateTime.now().toIso8601String().split('T')[0];
+      final todayLogs = logs.where((l) => l.date == today).toList();
+
+      int wakeH = 7, sleepH = 22;
+      try {
+        wakeH = int.parse(userData.wakeTime.split(':')[0]);
+        sleepH = int.parse(userData.sleepTime.split(':')[0]);
+      } catch (_) {}
+      if (sleepH <= wakeH) sleepH += 24;
+
+      List<int> slots = [];
+      for (int h = wakeH; h < sleepH; h += 2) {
+        slots.add(h % 24);
       }
+      if (slots.isEmpty) slots = [7, 9, 11, 13, 15, 17, 19, 21];
 
-      await HomeWidget.saveWidgetData<int>('intake', userData.drunk);
-      await HomeWidget.saveWidgetData<int>('goal', userData.goal);
-      await HomeWidget.saveWidgetData<int>('streak', displayStreak);
+      final List<int> values = List.filled(slots.length, 0);
+      final List<String> labels = [];
 
-      // Sync pro status for widgets
-      final mainPrefs = await SharedPreferences.getInstance();
-      final isPro = mainPrefs.getBool('isPremium') ?? false;
-      await HomeWidget.saveWidgetData<bool>('is_premium', isPro);
-
-      int lastAddedMl = 0;
-      if (logs != null && logs.isNotEmpty) {
-        final todayStr = DateTime.now().toIso8601String().split('T')[0];
-        if (logs.first.date == todayStr) {
-          lastAddedMl = logs.first.ml;
+      for (int i = 0; i < slots.length; i++) {
+        final h = slots[i];
+        final endH = (h + 2) % 24;
+        
+        final is24h = userData.is24HourFormat ?? false;
+        if (is24h) {
+          labels.add('${h.toString().padLeft(2, '0')}-${endH.toString().padLeft(2, '0')}h');
+        } else {
+          final sStr = TimeUtils.formatTimeOfDay(TimeOfDay(hour: h, minute: 0), false).replaceAll(' ', '').toLowerCase();
+          final eStr = TimeUtils.formatTimeOfDay(TimeOfDay(hour: endH, minute: 0), false).replaceAll(' ', '').toLowerCase();
+          labels.add('$sStr-$eStr');
         }
-      }
-      await HomeWidget.saveWidgetData<int>('last_added_ml', lastAddedMl);
-
-      // Hourly data aggregation for 4x3 Widget
-      if (logs != null) {
-        final today = DateTime.now().toIso8601String().split('T')[0];
-        final todayLogs = logs.where((l) => l.date == today).toList();
-
-        // 1. Calculate slots (reusing logic from provider for consistency)
-        int wakeH = 7;
-        int sleepH = 22;
-        try {
-          wakeH = int.parse(userData.wakeTime.split(':')[0]);
-          sleepH = int.parse(userData.sleepTime.split(':')[0]);
-        } catch (_) {}
-
-        if (sleepH <= wakeH) sleepH += 24;
-
-        List<int> slots = [];
-        for (int h = wakeH; h < sleepH; h += 2) {
-          slots.add(h % 24);
-        }
-
-        // 2. Add extra slots if logs exist outside range
-        bool hasEarly = false;
-        bool hasLate = false;
         for (var l in todayLogs) {
           try {
             final logH = int.parse(l.time.split(':')[0]);
-            if (logH < wakeH) hasEarly = true;
-            if (logH >= sleepH % 24 && logH >= (sleepH - 24).abs()) {
-               bool covered = false;
-               for (var s in slots) {
-                 if (logH >= s && logH < s + 2) covered = true;
-               }
-               if (!covered) hasLate = true;
-            }
+            if (logH >= h && logH < h + 2) values[i] += l.ml;
           } catch (_) {}
         }
-        if (hasEarly && !slots.contains((wakeH - 2) % 24)) slots.insert(0, (wakeH - 2) % 24);
-        if (hasLate) slots.add(sleepH % 24);
-        if (slots.isEmpty) slots = [7, 9, 11, 13, 15, 17, 19, 21];
-
-        // 3. Aggregate totals
-        final List<int> values = List.filled(slots.length, 0);
-        final List<String> labels = [];
-        for (int i = 0; i < slots.length; i++) {
-          final h = slots[i];
-          // Range label e.g., "7-9"
-          final h12Start = h == 0 ? 12 : (h > 12 ? h - 12 : h);
-          final endH = (h + 2) % 24;
-          final h12End = endH == 0 ? 12 : (endH > 12 ? endH - 12 : endH);
-          labels.add('$h12Start-$h12End');
-
-          for (var l in todayLogs) {
-            try {
-              final logH = int.parse(l.time.split(':')[0]);
-              if (logH >= h && logH < h + 2) {
-                values[i] += l.ml;
-              }
-            } catch (_) {}
-          }
-        }
-
-        await HomeWidget.saveWidgetData<String>('hourly_vals', values.join(','));
-        await HomeWidget.saveWidgetData<String>('hourly_labels', labels.join(','));
-
-        // Weekly data aggregation for 4x3 Weekly Widget
-        final List<int> weeklyVals = [];
-        final List<String> weeklyLabelsTop = [];
-        final List<String> weeklyLabelsBottom = [];
-        final List<String> weekDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-
-        final DateTime now = DateTime.now();
-        for (int i = 6; i >= 0; i--) {
-          final targetDate = now.subtract(Duration(days: i));
-          final dateStr = targetDate.toIso8601String().split('T')[0];
-          
-          final dayLogs = logs.where((l) => l.date == dateStr).toList();
-          int dailyTotal = 0;
-          for (var l in dayLogs) {
-            dailyTotal += l.ml;
-          }
-          weeklyVals.add(dailyTotal);
-          weeklyLabelsTop.add(weekDays[targetDate.weekday - 1]);
-          weeklyLabelsBottom.add('${targetDate.day}');
-        }
-        await HomeWidget.saveWidgetData<String>('weekly_vals', weeklyVals.join(','));
-        await HomeWidget.saveWidgetData<String>('weekly_labels_top', weeklyLabelsTop.join(','));
-        await HomeWidget.saveWidgetData<String>('weekly_labels_bottom', weeklyLabelsBottom.join(','));
-        
-        // Sync historical goals for the last 7 days so widget colors are accurate
-        List<int> weeklyGoals = [];
-        for (int i = 6; i >= 0; i--) {
-           final targetDate = now.subtract(Duration(days: i));
-           final dateStr = targetDate.toIso8601String().split('T')[0];
-           weeklyGoals.add(userData.goalForDate(dateStr));
-        }
-        await HomeWidget.saveWidgetData<String>('weekly_goals', weeklyGoals.join(','));
       }
 
-      // Next reminder
+      await Future.wait([
+        HomeWidget.saveWidgetData<String>('hourly_vals', values.join(',')),
+        HomeWidget.saveWidgetData<String>('hourly_labels', labels.join(',')),
+      ]);
+    } catch (_) {}
+  }
+
+  // ── Weekly data writer ─────────────────────────────────────────
+  static Future<void> _writeWeeklyData(
+      SharedPreferences prefs, UserData userData, List<DrinkLog> logs) async {
+    try {
+      final List<int> weeklyVals = [];
+      final List<String> weeklyLabelsTop = [];
+      final List<int> weeklyGoals = [];
+      const weekDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+      final now = DateTime.now();
+
+      for (int i = 6; i >= 0; i--) {
+        final targetDate = now.subtract(Duration(days: i));
+        final dateStr = targetDate.toIso8601String().split('T')[0];
+        final dayLogs = logs.where((l) => l.date == dateStr).toList();
+        int dailyTotal = 0;
+        for (var l in dayLogs) dailyTotal += l.ml;
+        weeklyVals.add(dailyTotal);
+        weeklyLabelsTop.add(weekDays[targetDate.weekday - 1]);
+        weeklyGoals.add(userData.goalForDate(dateStr));
+      }
+
+      await Future.wait([
+        HomeWidget.saveWidgetData<String>('weekly_vals', weeklyVals.join(',')),
+        HomeWidget.saveWidgetData<String>(
+            'weekly_labels_top', weeklyLabelsTop.join(',')),
+        HomeWidget.saveWidgetData<String>(
+            'weekly_goals', weeklyGoals.join(',')),
+      ]);
+    } catch (_) {}
+  }
+
+  // ── Next reminder writer ───────────────────────────────────────
+  static Future<void> _writeNextReminder(
+      SharedPreferences prefs, UserData userData) async {
+    try {
       String nextReminder = '--:--';
-      
-      // Get all potential reminder times (custom or generated)
       List<String> allTimes = List.from(userData.customReminderTimes);
-      
+
       if (allTimes.isEmpty && userData.reminders) {
-        // Fallback or Smart Reminders: generate same slots as in ScheduleScreen
         int wakeH = 7, sleepH = 22;
         try {
           wakeH = int.parse(userData.wakeTime.split(':')[0]);
           sleepH = int.parse(userData.sleepTime.split(':')[0]);
         } catch (_) {}
         if (sleepH <= wakeH) sleepH += 24;
-        
+
         final interval = userData.reminderIntervalMin;
         DateTime temp = DateTime(2024, 1, 1, wakeH, 0);
         DateTime limit = DateTime(2024, 1, 1, sleepH, 0);
-        
         while (temp.isBefore(limit)) {
-          allTimes.add("${temp.hour.toString().padLeft(2, '0')}:${temp.minute.toString().padLeft(2, '0')}");
+          allTimes.add(
+              '${temp.hour.toString().padLeft(2, '0')}:${temp.minute.toString().padLeft(2, '0')}');
           temp = temp.add(Duration(minutes: interval));
         }
       }
@@ -261,90 +333,80 @@ class WidgetService {
       if (allTimes.isNotEmpty) {
         final now = DateTime.now();
         final nowMins = now.hour * 60 + now.minute;
-        
         String? found;
         int minAfter = 9999;
-        
+
         for (var t in allTimes) {
           final parts = t.split(':');
           final h = int.tryParse(parts[0]) ?? 0;
           final m = int.tryParse(parts.length > 1 ? parts[1] : '0') ?? 0;
           final totalMins = h * 60 + m;
-          
           if (totalMins > nowMins && totalMins < minAfter) {
             minAfter = totalMins;
             found = t;
           }
         }
-        
+
         if (found != null) {
-          final parts = found.split(':');
-          final h = int.parse(parts[0]);
-          final m = int.parse(parts[1]);
-          final displayH = h == 0 ? 12 : (h > 12 ? h - 12 : h);
-          nextReminder = "$displayH:${m.toString().padLeft(2, '0')} ${h < 12 ? 'AM' : 'PM'}";
+          nextReminder = TimeUtils.formatString(found, userData.is24HourFormat);
         } else {
-          // Wrap to tomorrow
           final first = allTimes.first;
-          final parts = first.split(':');
-          final h = int.parse(parts[0]);
-          final m = int.parse(parts[1]);
-          final displayH = h == 0 ? 12 : (h > 12 ? h - 12 : h);
-          nextReminder = "Tmr $displayH:${m.toString().padLeft(2, '0')} ${h < 12 ? 'AM' : 'PM'}";
+          nextReminder = 'Tmr ${TimeUtils.formatString(first, userData.is24HourFormat)}';
         }
       }
+
       await HomeWidget.saveWidgetData<String>('next_reminder', nextReminder);
-
-      // Trigger update for both widgets
-      await HomeWidget.updateWidget(name: 'WaterWidgetReceiver', androidName: 'WaterWidgetReceiver');
-      await HomeWidget.updateWidget(name: 'HourlyWidgetReceiver', androidName: 'HourlyWidgetReceiver');
-      await HomeWidget.updateWidget(name: 'WeeklyWidgetReceiver', androidName: 'WeeklyWidgetReceiver');
-      await HomeWidget.updateWidget(name: 'BottleWidgetReceiver', androidName: 'BottleWidgetReceiver');
-      await HomeWidget.updateWidget(name: 'GridWidgetReceiver', androidName: 'GridWidgetReceiver');
-    } catch (_) { }
-  }
-  /// Reads latest data from SharedPreferences and pushes it to widgets.
-  /// Useful when external services (like Billing) update core flags.
-  static Future<void> syncFullWidgetData() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.reload();
-
-      UserData userData = UserData();
-      final userDataStr = prefs.getString('userData');
-      if (userDataStr != null) {
-        try {
-          userData = UserData.fromJson(jsonDecode(userDataStr));
-        } catch (_) {}
-      }
-
-      List<DrinkLog> logs = [];
-      final logsStr = prefs.getString('logs');
-      if (logsStr != null) {
-        try {
-          final List<dynamic> decoded = jsonDecode(logsStr);
-          logs = decoded.map((l) => DrinkLog.fromJson(l)).toList();
-        } catch (_) {}
-      }
-
-      await updateWidgetData(userData, logs: logs);
     } catch (_) {}
   }
 
-  /// Only sync the premium status to the widget. 
-  /// Useful for instant unlocking after a purchase.
+  // ── Full updateWidgetData — called from app foreground only ────
+  static Future<void> updateWidgetData(UserData userData,
+      {List<DrinkLog>? logs, bool isBackground = false}) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+
+      int displayStreak = userData.streak;
+      if (userData.drunk >= userData.goal) displayStreak++;
+
+      final isPro = prefs.getBool('isPremium') ?? false;
+
+      await Future.wait([
+        HomeWidget.saveWidgetData<int>('intake', userData.drunk),
+        HomeWidget.saveWidgetData<int>('goal', userData.goal),
+        HomeWidget.saveWidgetData<int>('streak', displayStreak),
+        HomeWidget.saveWidgetData<String>('volume_unit', userData.volumeUnit),
+        HomeWidget.saveWidgetData<bool>(
+            'is_24_hour_format', userData.is24HourFormat ?? false),
+        HomeWidget.saveWidgetData<bool>('is_premium', isPro),
+      ]);
+
+      if (logs != null) {
+        final todayStr = DateTime.now().toIso8601String().split('T')[0];
+        final todayLogs = logs.where((l) => l.date == todayStr).toList();
+        final lastAddedMl = todayLogs.isNotEmpty ? todayLogs.first.ml : 0;
+        final stackStr = todayLogs.map((e) => '${e.ml}').join(',');
+
+        await Future.wait([
+          HomeWidget.saveWidgetData<int>('last_added_ml', lastAddedMl),
+          HomeWidget.saveWidgetData<String>('widget_add_stack', stackStr),
+        ]);
+
+        await _writeHourlyData(prefs, userData, logs);
+        await _writeWeeklyData(prefs, userData, logs);
+      }
+
+      await _writeNextReminder(prefs, userData);
+      await _triggerAllWidgets();
+    } catch (_) {}
+  }
+
+  // ── Premium-only sync ──────────────────────────────────────────
   static Future<void> syncPremiumStatus() async {
     try {
-      final mainPrefs = await SharedPreferences.getInstance();
-      final isPro = mainPrefs.getBool('isPremium') ?? false;
+      final prefs = await SharedPreferences.getInstance();
+      final isPro = prefs.getBool('isPremium') ?? false;
       await HomeWidget.saveWidgetData<bool>('is_premium', isPro);
-      
-      // Trigger update for all widgets
-      await HomeWidget.updateWidget(name: 'WaterWidgetReceiver', androidName: 'WaterWidgetReceiver');
-      await HomeWidget.updateWidget(name: 'HourlyWidgetReceiver', androidName: 'HourlyWidgetReceiver');
-      await HomeWidget.updateWidget(name: 'WeeklyWidgetReceiver', androidName: 'WeeklyWidgetReceiver');
-      await HomeWidget.updateWidget(name: 'BottleWidgetReceiver', androidName: 'BottleWidgetReceiver');
-      await HomeWidget.updateWidget(name: 'GridWidgetReceiver', androidName: 'GridWidgetReceiver');
+      await _triggerAllWidgets();
     } catch (_) {}
   }
 }

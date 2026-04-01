@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
 import '../services/billing_service.dart';
 import '../widgets/top_snackbar.dart';
+import 'package:flutter/services.dart';
 
 class PremiumScreen extends StatelessWidget {
   const PremiumScreen({super.key});
@@ -103,13 +104,6 @@ class PremiumScreen extends StatelessWidget {
                       onPressed: () => Navigator.pop(context),
                     ),
                     const Spacer(),
-                    TextButton(
-                      onPressed: () {
-                        billing.restorePurchases();
-                        TopSnackBar.show(context, message: 'Restoring purchases...', type: TopSnackBarType.info);
-                      },
-                      child: Text('Restore', style: TextStyle(fontSize: 13.sp, fontWeight: FontWeight.w600, color: c.primary)),
-                    ),
                   ],
                 ),
               ),
@@ -180,6 +174,14 @@ class PremiumScreen extends StatelessWidget {
                       ),
                       _featureCard(
                         context,
+                        icon: Icons.battery_alert_rounded,
+                        title: 'Perfect Widget Reliability',
+                        desc: 'Widgets require the app to be set to "Unrestricted" battery usage in system settings to ensure they update instantly even when the app is in the background.',
+                        c: c,
+                        highlight: true,
+                      ),
+                      _featureCard(
+                        context,
                         icon: Icons.favorite_rounded,
                         title: 'Support Development',
                         desc: 'Your purchase directly supports future updates and helps keeping Aqua alive ❤️',
@@ -187,42 +189,81 @@ class PremiumScreen extends StatelessWidget {
                       ),
                       SizedBox(height: 32.h),
 
-                      // CTA button
-                      SizedBox(
-                        width: double.infinity,
-                        height: 56.h,
-                        child: ElevatedButton(
-                          onPressed: () => billing.buyPremium(),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: c.primary,
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18.r)),
-                            elevation: 0,
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.lock_open_rounded, size: 20.sp),
-                              SizedBox(width: 8.w),
-                              Text(
-                                billing.products.isNotEmpty
-                                    ? 'Upgrade — ${billing.products.first.price}'
-                                    : 'Upgrade to Aqua Pro',
-                                style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.w800),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      SizedBox(height: 12.h),
-
-                      // Lifetime note
-                      Text(
-                        'One-time purchase · Lifetime access',
-                        style: TextStyle(fontSize: 12.sp, color: c.mutedLight, fontWeight: FontWeight.w500),
-                      ),
                     ],
                   ),
+                ),
+              ),
+              
+              // Floating Bottom Action Area
+              Container(
+                padding: EdgeInsets.fromLTRB(24.w, 16.h, 24.w, 16.h),
+                decoration: BoxDecoration(
+                  color: c.bg,
+                  border: Border(top: BorderSide(color: c.softLight)),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // CTA button
+                    SizedBox(
+                      width: double.infinity,
+                      height: 56.h,
+                      child: ElevatedButton(
+                        onPressed: () => billing.buyPremium(),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: c.primary,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18.r)),
+                          elevation: 0,
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.lock_open_rounded, size: 20.sp),
+                            SizedBox(width: 8.w),
+                            Text(
+                              billing.products.isNotEmpty
+                                  ? 'Upgrade — ${billing.products.first.price}'
+                                  : 'Upgrade to Aqua Pro',
+                              style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.w800),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: 12.h),
+
+                    // Restore Area
+                    SizedBox(
+                      width: double.infinity,
+                      height: 52.h,
+                      child: OutlinedButton(
+                        onPressed: () {
+                          HapticFeedback.lightImpact();
+                          billing.restorePurchases();
+                          TopSnackBar.show(context, message: 'Restoring purchases...', type: TopSnackBarType.info);
+                        },
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: c.primary,
+                          side: BorderSide(color: c.primary.withValues(alpha: 0.2)),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.r)),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.restore_rounded, size: 18.sp),
+                            SizedBox(width: 8.w),
+                            Text('Restore Previous Purchase', style: TextStyle(fontSize: 14.sp, fontWeight: FontWeight.w700)),
+                          ],
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: 12.h),
+                    Text(
+                      'Lifetime access · Valid on all your Android devices',
+                      style: TextStyle(fontSize: 11.sp, color: c.mutedLight, fontWeight: FontWeight.w500),
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -232,14 +273,21 @@ class PremiumScreen extends StatelessWidget {
     );
   }
 
-  Widget _featureCard(BuildContext context, {required IconData icon, required String title, required String desc, required AppColors c}) {
+  Widget _featureCard(BuildContext context, {required IconData icon, required String title, required String desc, required AppColors c, bool highlight = false}) {
     return Container(
       margin: EdgeInsets.only(bottom: 14.h),
       padding: EdgeInsets.all(18.w),
       decoration: BoxDecoration(
-        color: c.card,
+        color: highlight ? c.primary.withValues(alpha: 0.05) : c.card,
         borderRadius: BorderRadius.circular(18.r),
-        border: Border.all(color: c.softLight),
+        border: Border.all(color: highlight ? c.primary.withValues(alpha: 0.3) : c.softLight, width: highlight ? 1.5 : 1),
+        boxShadow: highlight ? [
+          BoxShadow(
+            color: c.primary.withValues(alpha: 0.1),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          )
+        ] : null,
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -250,16 +298,16 @@ class PremiumScreen extends StatelessWidget {
               color: c.primary.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12.r),
             ),
-            child: Icon(icon, size: 22.sp, color: c.primary),
+            child: Icon(icon, size: 22.sp, color: highlight ? c.primary : c.primary),
           ),
           SizedBox(width: 14.w),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: TextStyle(fontSize: 15.sp, fontWeight: FontWeight.w700, color: c.primaryDark)),
+                Text(title, style: TextStyle(fontSize: 15.sp, fontWeight: FontWeight.w800, color: c.primaryDark)),
                 SizedBox(height: 4.h),
-                Text(desc, style: TextStyle(fontSize: 12.sp, color: c.mutedLight, height: 1.4)),
+                Text(desc, style: TextStyle(fontSize: 12.sp, color: highlight ? c.primaryDark.withValues(alpha: 0.8) : c.mutedLight, height: 1.4, fontWeight: highlight ? FontWeight.w500 : FontWeight.w400)),
               ],
             ),
           ),
@@ -267,6 +315,7 @@ class PremiumScreen extends StatelessWidget {
       ),
     );
   }
+
 
   Widget _backButton(BuildContext context, AppColors c) {
     return SizedBox(

@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../theme/app_theme.dart';
 import '../providers/hydration_provider.dart';
+import '../utils/time_utils.dart';
 
 class DailyLogInline extends StatelessWidget {
   final DateTime date;
@@ -111,11 +112,11 @@ class DailyLogInline extends StatelessWidget {
                     children: [
                       // Time
                       SizedBox(
-                        width: 45.w,
+                        width: 55.w,
                         child: Text(
-                          item.time,
+                          TimeUtils.formatString(item.time, provider.userData.is24HourFormat),
                           style: TextStyle(
-                            fontSize: 12.sp,
+                            fontSize: 10.sp, // Reduced font size slightly to fit 12h am/pm
                             fontWeight: FontWeight.w700,
                             color: context.colors.muted,
                           ),

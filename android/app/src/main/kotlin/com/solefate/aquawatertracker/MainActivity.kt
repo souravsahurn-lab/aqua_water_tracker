@@ -9,6 +9,9 @@ class MainActivity: FlutterActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
+        // Ensure WorkManager is initialized
+        androidx.work.WorkManager.getInstance(applicationContext)
+        
         // Ensure the content draws behind system bars
         WindowCompat.setDecorFitsSystemWindows(window, false)
         

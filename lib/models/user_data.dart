@@ -21,6 +21,9 @@ class UserData {
   bool customGoal;
   List<String> customReminderTimes; // HH:mm strings for manual reminders
   Map<String, int> dailyGoals; // date string → goal for that day
+  bool? is24HourFormat;
+  String volumeUnit;
+  String weightUnit;
 
   UserData({
     this.name = '',
@@ -43,6 +46,9 @@ class UserData {
     this.notificationSound = 'floraphonic_water_droplet_4_165639_mp3_mpeg',
     this.smartReminders = true,
     this.customGoal = false,
+    this.is24HourFormat,
+    this.volumeUnit = 'ml',
+    this.weightUnit = 'kg',
     List<String>? customReminderTimes,
     Map<String, int>? dailyGoals,
   })  : lastActiveDate = lastActiveDate ?? DateTime.now().toIso8601String().split('T')[0],
@@ -149,6 +155,9 @@ class UserData {
       notificationSound: json['notificationSound'] as String? ?? 'floraphonic_water_droplet_4_165639_mp3_mpeg',
       smartReminders: json['smartReminders'] as bool? ?? true,
       customGoal: json['customGoal'] as bool? ?? false,
+      is24HourFormat: json['is24HourFormat'] as bool?,
+      volumeUnit: json['volumeUnit'] as String? ?? 'ml',
+      weightUnit: json['weightUnit'] as String? ?? 'kg',
       customReminderTimes: (json['customReminderTimes'] as List<dynamic>?)
               ?.map((e) => e as String)
               .toList() ??
@@ -181,6 +190,9 @@ class UserData {
       'notificationSound': notificationSound,
       'smartReminders': smartReminders,
       'customGoal': customGoal,
+      'is24HourFormat': is24HourFormat,
+      'volumeUnit': volumeUnit,
+      'weightUnit': weightUnit,
       'customReminderTimes': customReminderTimes,
       'dailyGoals': dailyGoals,
     };
